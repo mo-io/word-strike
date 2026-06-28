@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Strike — Type Faster</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --neon-cyan: #00f5ff;
+    --neon-green: #39ff14;
+    --neon-pink: #ff2d78;
+    --neon-yellow: #ffe600;
+    --neon-purple: #bf5fff;
+    --bg: #060610;
+    --hud-bg: rgba(6,6,20,0.85);
+    --tile-bg: rgba(10,10,40,0.92);
+    --text: #e8e8ff;
+    --dim: #555577;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Courier New', Courier, monospace;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── HUD ── */
+  #hud {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 56px;
+    background: var(--hud-bg);
+    border-bottom: 1px solid rgba(0,245,255,0.2);
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 20px;
+    z-index: 10;
+    backdrop-filter: blur(4px);
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 60px;
+  }
+  .stat-label {
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--dim);
+    text-transform: uppercase;
+  }
+  .stat-value {
+    font-size: 18px;
+    font-weight: bold;
+    line-height: 1.1;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 8px var(--neon-cyan);
+  }
+
+  #combo-display {
+    font-size: 18px;
+    font-weight: bold;
+    color: var(--neon-yellow);
+    text-shadow: 0 0 10px var(--neon-yellow);
+    transition: transform 0.1s;
+  }
+  #combo-display.pop { transform: scale(1.4); }
+
+  #hearts {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+  }
+  .heart {
+    font-size: 22px;
+    transition: all 0.3s;
+    filter: drop-shadow(0 0 6px #ff2d78);
+  }
+  .heart.lost {
+    opacity: 0.15;
+    filter: none;
+    transform: scale(0.8);
+  }
+
+  #level-badge {
+    background: linear-gradient(135deg, var(--neon-purple), var(--neon-cyan));
+    color: #fff;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 3px 10px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+  }
+
+  /* ── GAME AREA ── */
+  #game-area {
+    position: fixed;
+    top: 56px; left: 0; right: 0; bottom: 0;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  /* ── WORD TILES ── */
+  .word-tile {
+    position: absolute;
+    background: var(--tile-bg);
+    border: 1px solid rgba(0,245,255,0.25);
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    white-space: nowrap;
+    pointer-events: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    backdrop-filter: blur(2px);
+  }
+  .word-tile.active {
+    border-color: var(--neon-cyan);
+    box-shadow: 0 0 14px rgba(0,245,255,0.5), inset 0 0 8px rgba(0,245,255,0.08);
+  }
+  .word-tile.wrong-flash {
+    border-color: var(--neon-pink);
+    box-shadow: 0 0 18px rgba(255,45,120,0.7);
+  }
+
+  .char { color: var(--dim); }
+  .char.typed { color: var(--neon-green); text-shadow: 0 0 6px var(--neon-green); }
+  .char.error { color: var(--neon-pink); text-shadow: 0 0 6px var(--neon-pink); }
+
+  /* ── OVERLAYS ── */
+  #overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(6,6,20,0.88);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    backdrop-filter: blur(6px);
+  }
+  #overlay.hidden { display: none; }
+
+  .overlay-title {
+    font-size: clamp(36px, 6vw, 72px);
+    font-weight: bold;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple), var(--neon-pink));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(0 0 20px var(--neon-cyan));
+    margin-bottom: 8px;
+  }
+
+  .overlay-sub {
+    font-size: 14px;
+    letter-spacing: 3px;
+    color: var(--dim);
+    margin-bottom: 40px;
+    text-transform: uppercase;
+  }
+
+  .big-btn {
+    background: transparent;
+    border: 2px solid var(--neon-cyan);
+    color: var(--neon-cyan);
+    font-family: inherit;
+    font-size: 16px;
+    letter-spacing: 3px;
+    padding: 14px 40px;
+    border-radius: 4px;
+    cursor: pointer;
+    text-transform: uppercase;
+    box-shadow: 0 0 14px rgba(0,245,255,0.4);
+    transition: all 0.2s;
+    pointer-events: all;
+  }
+  .big-btn:hover {
+    background: rgba(0,245,255,0.1);
+    box-shadow: 0 0 28px rgba(0,245,255,0.7);
+    transform: scale(1.04);
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px 32px;
+    margin: 24px 0 32px;
+    text-align: center;
+  }
+  .sg-label { font-size: 10px; letter-spacing: 2px; color: var(--dim); text-transform: uppercase; }
+  .sg-val { font-size: 28px; font-weight: bold; color: var(--neon-cyan); text-shadow: 0 0 10px var(--neon-cyan); }
+
+  /* level-up splash */
+  #level-splash {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0);
+    background: rgba(6,6,20,0.92);
+    border: 2px solid var(--neon-purple);
+    box-shadow: 0 0 40px rgba(191,95,255,0.6);
+    border-radius: 12px;
+    padding: 24px 48px;
+    z-index: 25;
+    text-align: center;
+    transition: transform 0.25s cubic-bezier(0.34,1.56,0.64,1), opacity 0.25s;
+    opacity: 0;
+    pointer-events: none;
+  }
+  #level-splash.show {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  #level-splash h2 {
+    font-size: 32px;
+    letter-spacing: 4px;
+    color: var(--neon-purple);
+    text-shadow: 0 0 16px var(--neon-purple);
+    text-transform: uppercase;
+  }
+  #level-splash p { color: var(--dim); margin-top: 6px; letter-spacing: 2px; font-size: 13px; }
+
+  /* instructions on start screen */
+  .instructions {
+    max-width: 420px;
+    text-align: center;
+    margin-bottom: 32px;
+    line-height: 1.8;
+    color: #8888aa;
+    font-size: 13px;
+  }
+  .instructions span { color: var(--neon-cyan); }
+
+  #high-score-line {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--dim);
+    letter-spacing: 2px;
+  }
+
+  /* ── MENU CONTROLS ── */
+  #menu-controls {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin: 0 6px;
+  }
+
+  .menu-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: transparent;
+    border: 1px solid rgba(0,245,255,0.18);
+    color: var(--dim);
+    font-family: inherit;
+    font-size: 9px;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 52px;
+    text-transform: uppercase;
+    line-height: 1.3;
+    gap: 1px;
+  }
+  .menu-btn .menu-icon { font-size: 13px; line-height: 1; }
+  .menu-btn .menu-key {
+    font-size: 8px;
+    color: rgba(85,85,119,0.6);
+    letter-spacing: 0;
+  }
+  .menu-btn:not(:disabled):hover {
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0,245,255,0.35);
+  }
+  .menu-btn.is-active {
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    box-shadow: 0 0 10px rgba(0,245,255,0.4);
+  }
+  .menu-btn.is-danger:not(:disabled):hover {
+    border-color: var(--neon-pink);
+    color: var(--neon-pink);
+    box-shadow: 0 0 10px rgba(255,45,120,0.35);
+  }
+  .menu-btn:disabled {
+    opacity: 0.22;
+    cursor: not-allowed;
+  }
+
+  /* ── PAUSE OVERLAY ── */
+  #pause-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(6,6,16,0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 15;
+    backdrop-filter: blur(3px);
+  }
+  #pause-overlay.hidden { display: none; }
+
+  #pause-card {
+    background: rgba(8,8,32,0.97);
+    border: 2px solid var(--neon-cyan);
+    box-shadow: 0 0 40px rgba(0,245,255,0.25);
+    border-radius: 12px;
+    padding: 32px 56px;
+    text-align: center;
+  }
+  #pause-card h2 {
+    font-size: 40px;
+    letter-spacing: 8px;
+    color: var(--neon-cyan);
+    text-shadow: 0 0 20px var(--neon-cyan);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  #pause-card p {
+    color: var(--dim);
+    letter-spacing: 2px;
+    font-size: 12px;
+    margin-bottom: 28px;
+  }
+  .pause-actions { display: flex; gap: 14px; justify-content: center; }
+  .big-btn.pink {
+    border-color: var(--neon-pink);
+    color: var(--neon-pink);
+    box-shadow: 0 0 14px rgba(255,45,120,0.35);
+  }
+  .big-btn.pink:hover {
+    background: rgba(255,45,120,0.1);
+    box-shadow: 0 0 28px rgba(255,45,120,0.7);
+  }
+
+  /* shake */
+  @keyframes shake {
+    0%,100% { transform: translate(0); }
+    20% { transform: translate(-6px, 2px); }
+    40% { transform: translate(6px, -2px); }
+    60% { transform: translate(-4px, 4px); }
+    80% { transform: translate(4px, -2px); }
+  }
+  body.shake { animation: shake 0.35s ease; }
+</style>
+</head>
+<body>
+
+<canvas id="bg-canvas"></canvas>
+<canvas id="fx-canvas"></canvas>
+
+<div id="hud">
+  <div class="stat">
+    <span class="stat-label">WPM</span>
+    <span class="stat-value" id="wpm-val">0</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Acc</span>
+    <span class="stat-value" id="acc-val">—</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Score</span>
+    <span class="stat-value" id="score-val">0</span>
+  </div>
+  <div class="stat">
+    <span class="stat-label">Combo</span>
+    <span id="combo-display">×1</span>
+  </div>
+  <div id="level-badge">LVL 1</div>
+
+  <div id="menu-controls">
+    <button class="menu-btn is-active" id="btn-start">
+      <span class="menu-icon">▶</span>
+      <span>Start</span>
+      <span class="menu-key">Enter</span>
+    </button>
+    <button class="menu-btn" id="btn-stop" disabled>
+      <span class="menu-icon">⏸</span>
+      <span>Pause</span>
+      <span class="menu-key">Esc</span>
+    </button>
+    <button class="menu-btn is-danger" id="btn-reset" disabled>
+      <span class="menu-icon">↺</span>
+      <span>Reset</span>
+      <span class="menu-key">R</span>
+    </button>
+  </div>
+
+  <div id="hearts" style="margin-left:auto">
+    <span class="heart">♥</span>
+    <span class="heart">♥</span>
+    <span class="heart">♥</span>
+    <span class="heart">♥</span>
+    <span class="heart">♥</span>
+  </div>
+</div>
+
+<div id="game-area"></div>
+
+<div id="pause-overlay" class="hidden">
+  <div id="pause-card">
+    <h2>Paused</h2>
+    <p>Words are frozen — pick up where you left off</p>
+    <div class="pause-actions">
+      <button class="big-btn" id="resume-btn">▶ Resume <small style="opacity:.6">[Enter]</small></button>
+      <button class="big-btn pink" id="reset-from-pause-btn">↺ Reset <small style="opacity:.6">[R]</small></button>
+    </div>
+  </div>
+</div>
+
+<div id="level-splash">
+  <h2 id="splash-title">Level Up!</h2>
+  <p id="splash-sub">Level 2 — Speed increases</p>
+</div>
+
+<div id="overlay">
+  <div class="overlay-title">Word Strike</div>
+  <div class="overlay-sub">Type Faster. Go Further.</div>
+  <div class="instructions">
+    Words drift across the screen. <span>Type the glowing word</span> to destroy it.<br>
+    Miss a word and lose a ♥. Chain words for a <span>combo multiplier</span>.<br>
+    10 levels of escalating chaos await you.
+  </div>
+  <button class="big-btn" id="start-btn">Start Game</button>
+  <div id="high-score-line"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════
+//  WORD LISTS  (5 tiers by difficulty)
+// ═══════════════════════════════════════════════════
+const WORDS = {
+  1: ['at','be','do','go','he','hi','if','in','is','it','me','my','no','of','oh','ok','on','or','so','to','up','us','we'],
+  2: ['able','also','back','ball','bank','base','bold','book','burn','busy','calm','care','case','city','code','come','cool','dark','data','days','deal','done','door','drop','each','easy','edge','else','even','ever','fact','fall','fast','feel','file','find','fire','five','flow','form','free','from','full','game','give','good','grow','half','hand','hard','have','here','high','hold','home','hope','hour','idea','into','just','keep','kind','know','land','last','late','left','less','life','like','line','list','live','long','look','love','made','main','make','many','mark','mass','mean','meet','mind','miss','mode','more','most','move','much','must','name','need','next','nice','node','note','null','only','open','over','page','pair','part','pass','past','path','pick','plan','play','plus','port','post','pull','push','read','real','rest','rich','risk','road','role','room','rule','rush','safe','same','save','send','show','side','size','slow','some','sort','stay','step','stop','such','sure','sync','take','talk','task','tell','term','test','text','than','that','then','they','time','tool','tree','true','tune','turn','type','unit','used','user','vary','very','view','wait','want','warn','well','went','when','will','with','word','work','wrap','year','zero','zone'],
+  3: ['access','active','actual','always','assert','attach','backup','battle','border','bridge','broken','buffer','bundle','button','cached','called','cancel','change','charge','choose','circle','client','colour','coming','config','corner','create','cursor','custom','danger','define','delete','deploy','detail','detect','direct','driven','effect','enable','encode','energy','engine','escape','export','extend','filter','finger','folder','follow','format','frozen','future','global','growth','handle','happen','header','height','hidden','higher','import','indeed','inject','inputs','insert','inside','intent','launch','layers','layout','leader','length','listen','locate','logger','looked','master','matter','mobile','modern','module','motion','native','needed','nested','normal','notice','number','object','offset','online','option','output','parent','parser','passed','paused','period','phrase','player','portal','prefix','prompt','proven','pushed','random','ranges','reader','recent','record','reduce','render','repeat','replay','report','return','review','rocket','rotate','routes','runner','sample','screen','script','search','select','series','server','signal','simple','skills','sorted','source','spaces','stable','static','status','stream','string','struct','switch','symbol','syntax','system','target','theory','thread','toggle','travel','tunnel','update','upload','useful','values','visual','weekly','widget','window','worker','writer','yields'],
+  4: ['absolute','abstract','accuracy','activate','baseline','blocking','callback','capacity','category','centered','changing','children','circular','clearing','clearing','compiled','complete','computed','constant','contains','contents','contract','controls','coverage','database','datetime','declares','defaults','deletion','describe','detected','diffusion','directed','disabled','dispatch','distinct','document','download','duration','elements','embedded','endpoint','enforced','evaluate','exceeding','excluded','exporter','extended','external','feedback','filename','filtered','finished','floating','frontend','function','generate','globally','gradient','handlers','hostname','includes','indexing','internal','interval','iterator','language','launcher','listener','location','manifest','manually','mappings','matching','maximize','measured','messages','metadata','minimize','modifier','multiple','mutation','negative','numbered','observer','optional','ordering','override','packages','parallel','payloads','pipeline','platform','position','priority','property','provides','readable','recursor','redirect','register','released','renderer','required','resolver','response','reversed','rollback','rotation','runtime','scanning','schedule','selected','sequence','settings','shortcut','snapshot','solution','specific','standard','strategy','template','terminal','thousand','throttle','timezone','tracking','training','transfer','traverse','triggers','validate','variable','velocity','versions','viewport','whatever','wireless','wrapping'],
+  5: ['algorithmic','application','architecture','asynchronous','automatically','backgroundColor','borderRadius','calculateHash','capabilities','comprehensive','configurable','continuously','controversial','customization','decomposition','dependencies','determination','disadvantages','documentation','effectiveness','environments','experimental','extraordinary','implementation','independently','initialization','interpolation','localStorage','nevertheless','notification','optimizations','parallelizing','performanceNow','preprocessors','prioritization','progressively','reconciliation','redistribution','refactorings','relationships','rerenderings','serialization','specification','straightforward','subscriptions','synchronously','systematically','transformation','triggerUpdate','visualization','webComponents']
+};
+
+// flatten all tiers for random access
+const ALL_WORDS_BY_TIER = [null, ...Object.values(WORDS)];
+
+// ═══════════════════════════════════════════════════
+//  LEVEL CONFIG
+// ═══════════════════════════════════════════════════
+const LEVEL_SCORE = [0,0,500,1500,3500,7000,12000,20000,32000,50000,75000];
+const LEVEL_CFG = [null,
+  // {maxWords, spawnMs, speedPx, tierWeights[1..5]}
+  {maxWords:3, spawnMs:3200, speedPx:0.7, tiers:[0,70,30,0,0,0]},
+  {maxWords:3, spawnMs:2800, speedPx:0.9, tiers:[0,50,45,5,0,0]},
+  {maxWords:4, spawnMs:2400, speedPx:1.1, tiers:[0,30,50,18,2,0]},
+  {maxWords:4, spawnMs:2000, speedPx:1.3, tiers:[0,15,40,35,10,0]},
+  {maxWords:5, spawnMs:1800, speedPx:1.5, tiers:[0,5,30,40,22,3]},
+  {maxWords:5, spawnMs:1600, speedPx:1.7, tiers:[0,0,20,42,30,8]},
+  {maxWords:6, spawnMs:1400, speedPx:2.0, tiers:[0,0,12,38,38,12]},
+  {maxWords:7, spawnMs:1200, speedPx:2.3, tiers:[0,0,5,30,45,20]},
+  {maxWords:8, spawnMs:1000, speedPx:2.7, tiers:[0,0,0,20,48,32]},
+  {maxWords:8, spawnMs: 900, speedPx:3.2, tiers:[0,0,0,10,45,45]},
+];
+
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+let state = {
+  running: false,
+  paused: false,
+  level: 1,
+  score: 0,
+  hp: 5,
+  combo: 1,
+  comboCount: 0,
+  totalKeys: 0,
+  correctKeys: 0,
+  wordsCompleted: 0,
+  wpmWindow: [],   // [{time, chars}]
+  activeId: null,
+  tiles: {},       // id -> {word, typed, x, y, el, speed}
+  nextId: 0,
+  spawnTimer: null,
+  moveRaf: null,
+  fxRaf: null,
+  particles: [],
+  stars: [],
+  audioCtx: null,
+};
+
+// ═══════════════════════════════════════════════════
+//  DOM REFS
+// ═══════════════════════════════════════════════════
+const bgCanvas = document.getElementById('bg-canvas');
+const fxCanvas = document.getElementById('fx-canvas');
+const bgCtx = bgCanvas.getContext('2d');
+const fxCtx = fxCanvas.getContext('2d');
+const gameArea = document.getElementById('game-area');
+const overlay = document.getElementById('overlay');
+const overlayTitle = document.querySelector('.overlay-title');
+const overlaySub = document.querySelector('.overlay-sub');
+const startBtn = document.getElementById('start-btn');
+const levelSplash = document.getElementById('level-splash');
+const splashTitle = document.getElementById('splash-title');
+const splashSub = document.getElementById('splash-sub');
+const wpmEl = document.getElementById('wpm-val');
+const accEl = document.getElementById('acc-val');
+const scoreEl = document.getElementById('score-val');
+const comboEl = document.getElementById('combo-display');
+const levelBadge = document.getElementById('level-badge');
+const heartsEl = document.getElementById('hearts');
+const highScoreLine = document.getElementById('high-score-line');
+const btnStart = document.getElementById('btn-start');
+const btnStop  = document.getElementById('btn-stop');
+const btnReset = document.getElementById('btn-reset');
+const pauseOverlay = document.getElementById('pause-overlay');
+const resumeBtn = document.getElementById('resume-btn');
+const resetFromPauseBtn = document.getElementById('reset-from-pause-btn');
+
+// ═══════════════════════════════════════════════════
+//  CANVAS RESIZE
+// ═══════════════════════════════════════════════════
+function resizeCanvases() {
+  bgCanvas.width = fxCanvas.width = window.innerWidth;
+  bgCanvas.height = fxCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvases);
+resizeCanvases();
+
+// ═══════════════════════════════════════════════════
+//  STARFIELD
+// ═══════════════════════════════════════════════════
+function initStars() {
+  state.stars = [];
+  for (let i = 0; i < 160; i++) {
+    state.stars.push({
+      x: Math.random() * bgCanvas.width,
+      y: Math.random() * bgCanvas.height,
+      r: Math.random() * 1.4 + 0.2,
+      speed: Math.random() * 0.3 + 0.05,
+      alpha: Math.random() * 0.7 + 0.1,
+    });
+  }
+}
+
+let starRaf;
+function drawStars() {
+  bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+  bgCtx.fillStyle = '#060610';
+  bgCtx.fillRect(0, 0, bgCanvas.width, bgCanvas.height);
+  for (const s of state.stars) {
+    bgCtx.beginPath();
+    bgCtx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    bgCtx.fillStyle = `rgba(180,200,255,${s.alpha})`;
+    bgCtx.fill();
+    s.x -= s.speed;
+    if (s.x < 0) { s.x = bgCanvas.width; s.y = Math.random() * bgCanvas.height; }
+  }
+  starRaf = requestAnimationFrame(drawStars);
+}
+initStars();
+drawStars();
+
+// ═══════════════════════════════════════════════════
+//  AUDIO
+// ═══════════════════════════════════════════════════
+function initAudio() {
+  if (state.audioCtx) return;
+  state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playTone(freq, type='sine', dur=0.06, vol=0.12, delay=0) {
+  if (!state.audioCtx) return;
+  const ctx = state.audioCtx;
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain); gain.connect(ctx.destination);
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+  gain.gain.setValueAtTime(vol, ctx.currentTime + delay);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + dur);
+  osc.start(ctx.currentTime + delay);
+  osc.stop(ctx.currentTime + delay + dur + 0.01);
+}
+
+function playKeyTick() { playTone(440 + Math.random()*120, 'triangle', 0.04, 0.08); }
+function playWordDone() {
+  playTone(523, 'sine', 0.08, 0.14, 0);
+  playTone(659, 'sine', 0.08, 0.14, 0.07);
+  playTone(784, 'sine', 0.1,  0.14, 0.14);
+}
+function playMiss() { playTone(150, 'sawtooth', 0.2, 0.15); }
+function playLevelUp() {
+  [523,659,784,1047].forEach((f,i) => playTone(f,'sine',0.12,0.16,i*0.1));
+}
+function playError() { playTone(220, 'square', 0.05, 0.08); }
+
+// ═══════════════════════════════════════════════════
+//  WORD SELECTION
+// ═══════════════════════════════════════════════════
+function pickWord() {
+  const cfg = LEVEL_CFG[state.level];
+  const roll = Math.random() * 100;
+  let cum = 0, tier = 1;
+  for (let t = 1; t <= 5; t++) {
+    cum += cfg.tiers[t];
+    if (roll < cum) { tier = t; break; }
+  }
+  const pool = ALL_WORDS_BY_TIER[tier];
+  // avoid duplicates
+  const active = Object.values(state.tiles).map(t => t.word);
+  let candidates = pool.filter(w => !active.includes(w));
+  if (!candidates.length) candidates = pool;
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+// ═══════════════════════════════════════════════════
+//  TILE MANAGEMENT
+// ═══════════════════════════════════════════════════
+function spawnWord() {
+  if (!state.running) return;
+  const cfg = LEVEL_CFG[state.level];
+  if (Object.keys(state.tiles).length >= cfg.maxWords) return;
+
+  const word = pickWord();
+  const id = state.nextId++;
+  const areaH = window.innerHeight - 56;
+  const y = 56 + 20 + Math.random() * (areaH - 80);
+
+  const el = document.createElement('div');
+  el.className = 'word-tile';
+  el.id = `tile-${id}`;
+  el.style.right = '-200px';
+  el.style.top = y + 'px';
+
+  // build char spans
+  el.innerHTML = word.split('').map(c => `<span class="char">${c}</span>`).join('');
+  gameArea.appendChild(el);
+
+  // start off-screen right
+  const tileW = el.offsetWidth || 160;
+  const startX = window.innerWidth + 10;
+  el.style.left = startX + 'px';
+  el.style.right = '';
+
+  state.tiles[id] = {
+    word,
+    typed: 0,
+    x: startX,
+    y,
+    el,
+    speed: cfg.speedPx * (0.85 + Math.random() * 0.3),
+  };
+
+  // auto-select first word
+  if (state.activeId === null) selectTile(id);
+}
+
+function selectTile(id) {
+  if (state.activeId !== null && state.tiles[state.activeId]) {
+    state.tiles[state.activeId].el.classList.remove('active');
+  }
+  state.activeId = id;
+  if (id !== null && state.tiles[id]) {
+    state.tiles[id].el.classList.add('active');
+  }
+}
+
+function destroyTile(id) {
+  const t = state.tiles[id];
+  if (!t) return;
+  const rect = t.el.getBoundingClientRect();
+  spawnParticles(rect.left + rect.width/2, rect.top + rect.height/2);
+  t.el.remove();
+  delete state.tiles[id];
+  if (state.activeId === id) {
+    state.activeId = null;
+    // pick next closest to left edge
+    const ids = Object.keys(state.tiles);
+    if (ids.length) {
+      ids.sort((a,b) => state.tiles[a].x - state.tiles[b].x);
+      selectTile(+ids[0]);
+    }
+  }
+}
+
+function escapeTile(id) {
+  const t = state.tiles[id];
+  if (!t) return;
+  t.el.remove();
+  delete state.tiles[id];
+  loseHp();
+  state.combo = 1; state.comboCount = 0;
+  updateComboDisplay();
+  if (state.activeId === id) {
+    state.activeId = null;
+    const ids = Object.keys(state.tiles);
+    if (ids.length) {
+      ids.sort((a,b) => state.tiles[a].x - state.tiles[b].x);
+      selectTile(+ids[0]);
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  MOVEMENT LOOP
+// ═══════════════════════════════════════════════════
+let lastMove = 0;
+function moveLoop(ts) {
+  if (!state.running || state.paused) return;
+  const dt = Math.min(ts - lastMove, 50);
+  lastMove = ts;
+
+  for (const id in state.tiles) {
+    const t = state.tiles[id];
+    t.x -= t.speed * (dt / 16.67);
+    t.el.style.left = t.x + 'px';
+    if (t.x + (t.el.offsetWidth || 160) < 0) {
+      escapeTile(+id);
+      continue;
+    }
+  }
+  state.moveRaf = requestAnimationFrame(moveLoop);
+}
+
+// ═══════════════════════════════════════════════════
+//  PARTICLES (on fx canvas)
+// ═══════════════════════════════════════════════════
+const COLORS = ['#00f5ff','#39ff14','#ff2d78','#ffe600','#bf5fff','#ff8c00'];
+
+function spawnParticles(cx, cy) {
+  const count = 24 + Math.floor(Math.random()*10);
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 5;
+    state.particles.push({
+      x: cx, y: cy,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      life: 1,
+      decay: 0.025 + Math.random() * 0.03,
+      r: 2 + Math.random() * 3,
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+    });
+  }
+}
+
+function fxLoop() {
+  fxCtx.clearRect(0, 0, fxCanvas.width, fxCanvas.height);
+  for (let i = state.particles.length - 1; i >= 0; i--) {
+    const p = state.particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.08;
+    p.vx *= 0.97;
+    p.life -= p.decay;
+    if (p.life <= 0) { state.particles.splice(i,1); continue; }
+    fxCtx.globalAlpha = p.life;
+    fxCtx.fillStyle = p.color;
+    fxCtx.beginPath();
+    fxCtx.arc(p.x, p.y, p.r * p.life, 0, Math.PI * 2);
+    fxCtx.fill();
+  }
+  fxCtx.globalAlpha = 1;
+  state.fxRaf = requestAnimationFrame(fxLoop);
+}
+fxLoop();
+
+// ═══════════════════════════════════════════════════
+//  INPUT HANDLING
+// ═══════════════════════════════════════════════════
+document.addEventListener('keydown', e => {
+  if (!state.running || state.paused) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const key = e.key;
+  if (key.length !== 1) return;
+  e.preventDefault();
+  initAudio();
+
+  const id = state.activeId;
+  if (id === null) return;
+  const t = state.tiles[id];
+  if (!t) return;
+
+  state.totalKeys++;
+  const expected = t.word[t.typed];
+
+  if (key === expected) {
+    state.correctKeys++;
+    t.typed++;
+    updateTileChars(t);
+    playKeyTick();
+    // log for WPM
+    state.wpmWindow.push({time: Date.now(), chars: 1});
+
+    if (t.typed === t.word.length) {
+      // word complete!
+      wordComplete(id, t);
+    }
+  } else {
+    // wrong key
+    flashError(t);
+    playError();
+  }
+  updateHUD();
+});
+
+function updateTileChars(t) {
+  const spans = t.el.querySelectorAll('.char');
+  spans.forEach((sp, i) => {
+    sp.className = 'char' + (i < t.typed ? ' typed' : '');
+  });
+}
+
+function flashError(t) {
+  t.el.classList.add('wrong-flash');
+  setTimeout(() => t.el && t.el.classList.remove('wrong-flash'), 300);
+}
+
+function wordComplete(id, t) {
+  const points = t.word.length * 10 * state.combo;
+  state.score += points;
+  state.wordsCompleted++;
+  state.comboCount++;
+
+  // combo escalation
+  if (state.comboCount >= 8) state.combo = 8;
+  else if (state.comboCount >= 4) state.combo = 4;
+  else if (state.comboCount >= 2) state.combo = 2;
+
+  updateComboDisplay(true);
+  destroyTile(id);
+  playWordDone();
+  checkLevelUp();
+  updateHUD();
+}
+
+// ═══════════════════════════════════════════════════
+//  HP
+// ═══════════════════════════════════════════════════
+function loseHp() {
+  if (state.hp <= 0) return;
+  state.hp--;
+  playMiss();
+  screenShake();
+  renderHearts();
+  if (state.hp <= 0) gameOver();
+}
+
+function renderHearts() {
+  const hearts = heartsEl.querySelectorAll('.heart');
+  hearts.forEach((h, i) => {
+    h.classList.toggle('lost', i >= state.hp);
+  });
+}
+
+function screenShake() {
+  document.body.classList.remove('shake');
+  void document.body.offsetWidth; // reflow
+  document.body.classList.add('shake');
+  setTimeout(() => document.body.classList.remove('shake'), 400);
+}
+
+// ═══════════════════════════════════════════════════
+//  HUD UPDATES
+// ═══════════════════════════════════════════════════
+function calcWPM() {
+  const now = Date.now();
+  const cutoff = now - 10000;
+  state.wpmWindow = state.wpmWindow.filter(e => e.time > cutoff);
+  const chars = state.wpmWindow.reduce((s, e) => s + e.chars, 0);
+  return Math.round((chars / 5) / (10 / 60));
+}
+
+function updateHUD() {
+  wpmEl.textContent = calcWPM();
+  accEl.textContent = state.totalKeys > 0
+    ? Math.round(state.correctKeys / state.totalKeys * 100) + '%'
+    : '—';
+  scoreEl.textContent = state.score.toLocaleString();
+}
+
+function updateComboDisplay(pop = false) {
+  comboEl.textContent = '×' + state.combo;
+  if (pop) {
+    comboEl.classList.remove('pop');
+    void comboEl.offsetWidth;
+    comboEl.classList.add('pop');
+    setTimeout(() => comboEl.classList.remove('pop'), 120);
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  LEVEL UP
+// ═══════════════════════════════════════════════════
+function checkLevelUp() {
+  if (state.level >= 10) return;
+  if (state.score >= LEVEL_SCORE[state.level + 1]) {
+    state.level++;
+    playLevelUp();
+    levelBadge.textContent = state.level === 10 ? '∞ MODE' : `LVL ${state.level}`;
+    splashTitle.textContent = state.level === 10 ? 'INFINITE MODE!' : `Level ${state.level}!`;
+    splashSub.textContent = state.level === 10
+      ? 'Maximum chaos unlocked — good luck!'
+      : `Speed ×${(LEVEL_CFG[state.level].speedPx / LEVEL_CFG[1].speedPx).toFixed(1)} — Words getting longer`;
+    levelSplash.classList.add('show');
+    setTimeout(() => levelSplash.classList.remove('show'), 1800);
+    restartSpawnTimer();
+  }
+}
+
+function restartSpawnTimer() {
+  clearInterval(state.spawnTimer);
+  const cfg = LEVEL_CFG[state.level];
+  state.spawnTimer = setInterval(spawnWord, cfg.spawnMs);
+}
+
+// ═══════════════════════════════════════════════════
+//  GAME LIFECYCLE
+// ═══════════════════════════════════════════════════
+function startGame() {
+  initAudio();
+  // clear tiles
+  for (const id in state.tiles) { state.tiles[id].el.remove(); }
+  state.tiles = {};
+  state.nextId = 0;
+  state.activeId = null;
+  state.level = 1;
+  state.score = 0;
+  state.hp = 5;
+  state.combo = 1;
+  state.comboCount = 0;
+  state.totalKeys = 0;
+  state.correctKeys = 0;
+  state.wordsCompleted = 0;
+  state.wpmWindow = [];
+  state.particles = [];
+  state.running = true;
+
+  overlay.classList.add('hidden');
+  renderHearts();
+  updateHUD();
+  updateComboDisplay();
+  levelBadge.textContent = 'LVL 1';
+  syncMenuButtons();
+
+  lastMove = performance.now();
+  state.moveRaf = requestAnimationFrame(moveLoop);
+
+  // spawn first word immediately, then on interval
+  spawnWord();
+  restartSpawnTimer();
+}
+
+function gameOver() {
+  state.running = false;
+  cancelAnimationFrame(state.moveRaf);
+  clearInterval(state.spawnTimer);
+  for (const id in state.tiles) { state.tiles[id].el.remove(); }
+  state.tiles = {};
+  state.activeId = null;
+
+  const wpm = calcWPM();
+  const acc = state.totalKeys > 0
+    ? Math.round(state.correctKeys / state.totalKeys * 100) : 0;
+
+  // save high score
+  const prev = parseInt(localStorage.getItem('ws_hs') || '0');
+  const newHS = Math.max(prev, state.score);
+  localStorage.setItem('ws_hs', newHS);
+
+  overlayTitle.textContent = 'Game Over';
+  overlaySub.innerHTML = `
+    <div class="stat-grid">
+      <div><div class="sg-label">Score</div><div class="sg-val">${state.score.toLocaleString()}</div></div>
+      <div><div class="sg-label">WPM</div><div class="sg-val">${wpm}</div></div>
+      <div><div class="sg-label">Accuracy</div><div class="sg-val">${acc}%</div></div>
+      <div><div class="sg-label">Words</div><div class="sg-val">${state.wordsCompleted}</div></div>
+    </div>`;
+  startBtn.textContent = 'Play Again';
+  highScoreLine.textContent = `Best: ${newHS.toLocaleString()}`;
+  overlay.classList.remove('hidden');
+  syncMenuButtons();
+}
+
+// ═══════════════════════════════════════════════════
+//  MENU BUTTON STATE SYNC
+// ═══════════════════════════════════════════════════
+function syncMenuButtons() {
+  const idle    = !state.running && !state.paused;
+  const running = state.running && !state.paused;
+  const paused  = state.paused;
+
+  // START button: available when idle or paused; label changes
+  btnStart.disabled = running;
+  btnStart.classList.toggle('is-active', idle || paused);
+  btnStart.querySelector('span:nth-child(2)').textContent = paused ? 'Resume' : 'Start';
+
+  // STOP / Pause button: available only while actively running
+  btnStop.disabled = !running;
+  btnStop.classList.toggle('is-active', running);
+
+  // RESET button: available while running or paused
+  btnReset.disabled = idle;
+}
+
+// ═══════════════════════════════════════════════════
+//  PAUSE / RESUME / RESET
+// ═══════════════════════════════════════════════════
+function pauseGame() {
+  if (!state.running || state.paused) return;
+  state.paused = true;
+  cancelAnimationFrame(state.moveRaf);
+  clearInterval(state.spawnTimer);
+  pauseOverlay.classList.remove('hidden');
+  syncMenuButtons();
+}
+
+function resumeGame() {
+  if (!state.paused) return;
+  state.paused = false;
+  pauseOverlay.classList.add('hidden');
+  lastMove = performance.now();
+  state.moveRaf = requestAnimationFrame(moveLoop);
+  restartSpawnTimer();
+  syncMenuButtons();
+}
+
+function resetGame() {
+  state.running = false;
+  state.paused  = false;
+  cancelAnimationFrame(state.moveRaf);
+  clearInterval(state.spawnTimer);
+  pauseOverlay.classList.add('hidden');
+  for (const id in state.tiles) { state.tiles[id].el.remove(); }
+  state.tiles = {};
+  state.activeId = null;
+  state.particles = [];
+
+  // restore start screen
+  overlayTitle.textContent = 'Word Strike';
+  overlaySub.textContent = 'Type Faster. Go Further.';
+  startBtn.textContent = 'Start Game';
+  const storedHS = localStorage.getItem('ws_hs');
+  highScoreLine.textContent = storedHS && storedHS !== '0'
+    ? `Best: ${parseInt(storedHS).toLocaleString()}` : '';
+  overlay.classList.remove('hidden');
+  syncMenuButtons();
+}
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+btnStart.addEventListener('click', () => {
+  if (state.paused) resumeGame();
+  else if (!state.running) startGame();
+});
+btnStop.addEventListener('click', pauseGame);
+btnReset.addEventListener('click', resetGame);
+resumeBtn.addEventListener('click', resumeGame);
+resetFromPauseBtn.addEventListener('click', resetGame);
+
+startBtn.addEventListener('click', startGame);
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  // Escape — pause or resume
+  if (e.key === 'Escape') {
+    if (state.running && !state.paused) { pauseGame(); return; }
+    if (state.paused) { resumeGame(); return; }
+    return;
+  }
+  // Enter — start (from overlay) or resume (from pause)
+  if (e.key === 'Enter') {
+    if (state.paused) { resumeGame(); return; }
+    if (!state.running && !overlay.classList.contains('hidden')) { startGame(); return; }
+    return;
+  }
+  // R — reset (only when not actively typing, i.e. paused or on overlay)
+  if (e.key === 'r' || e.key === 'R') {
+    if (state.paused) { resetGame(); return; }
+    if (!state.running && !overlay.classList.contains('hidden')) { resetGame(); return; }
+  }
+});
+
+// show high score on start screen
+const storedHS = localStorage.getItem('ws_hs');
+if (storedHS && storedHS !== '0') {
+  highScoreLine.textContent = `Best: ${parseInt(storedHS).toLocaleString()}`;
+}
+overlaySub.textContent = 'Type Faster. Go Further.';
+</script>
+</body>
+</html>
