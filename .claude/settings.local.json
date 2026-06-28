@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($g = Get-Command git -ErrorAction SilentlyContinue; if \\($g\\) { Write-Output \"INSTALLED: $\\($g.Source\\)\"; git --version } else { Write-Output \"NOT INSTALLED\" })",
+      "PowerShell($gh = \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\"; & $gh auth status; Write-Output \"--- credential helper ---\"; git config --global credential.helper)"
+    ]
+  }
+}
