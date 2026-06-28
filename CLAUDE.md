@@ -6,6 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Word Strike** — a neon cyberpunk typing-speed trainer built as a single self-contained HTML file (`typing-game.html`). No build step, no dependencies, no external assets. Everything is inline HTML/CSS/JS. The game teaches faster typing through progressive difficulty, real-time feedback, and a combo/score system.
 
+## Deployment
+
+**Live (Vercel):** deployed from the `master` branch of `github.com/mo-io/word-strike` (private repo). Vercel auto-redeploys on every push to `master`.
+
+`vercel.json` rewrites `/` → `/typing-game.html` so the root URL serves the game (Vercel's static server defaults to `index.html`, which doesn't exist here).
+
+**GitHub:** `git@github.com:mo-io/word-strike.git` — private repo, SSH auth via `C:\Program Files\GitHub CLI\gh.exe` (account: `mo-io`).
+
 ## Running locally
 
 The launch config serves the project root with Python's built-in HTTP server:
