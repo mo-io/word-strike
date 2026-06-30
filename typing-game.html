@@ -465,15 +465,11 @@
     #level-splash { padding: 18px 28px; }
     #level-splash h2 { font-size: 24px; letter-spacing: 3px; }
 
-    .instructions { font-size: 12px; max-width: 90%; margin-bottom: 24px; }
-    .overlay-sub { margin-bottom: 24px; font-size: 12px; }
+    .instructions { font-size: 12px; max-width: 90%; margin-bottom: 16px; }
+    .overlay-sub { margin-bottom: 16px; font-size: 12px; }
     .big-btn { padding: 12px 30px; font-size: 14px; }
-
-    /* tighter HUD to fit the language button */
-    #hud { gap: 4px; }
-    #menu-controls { gap: 2px; }
-    .menu-btn { min-width: 26px; }
-    #btn-lang { font-size: 9px; padding: 3px 5px; min-width: 24px; }
+    #lang-selector { gap: 8px; margin-bottom: 20px; }
+    .lang-btn { padding: 8px 20px; font-size: 13px; }
   }
 
   /* ── ARABIC WORD TILES ── */
@@ -483,35 +479,37 @@
     font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif;
   }
 
-  /* ── HUD LANGUAGE BUTTON ── */
-  #btn-lang {
+  /* ── LANGUAGE SELECTOR (start / game-over overlay) ── */
+  #lang-selector {
     display: flex;
-    align-items: center;
-    justify-content: center;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .lang-btn {
     background: transparent;
-    border: 1px solid rgba(191,95,255,0.3);
+    border: 2px solid rgba(0,245,255,0.2);
     color: var(--dim);
     font-family: inherit;
-    font-size: 10px;
-    letter-spacing: 1px;
-    padding: 4px 10px;
+    font-size: 15px;
+    letter-spacing: 2px;
+    padding: 10px 32px;
     border-radius: 4px;
     cursor: pointer;
-    transition: all 0.15s;
-    min-width: 40px;
-    text-transform: uppercase;
+    transition: all 0.2s;
     touch-action: manipulation;
-    flex-shrink: 0;
   }
-  #btn-lang:hover {
-    border-color: var(--neon-purple);
-    color: var(--neon-purple);
-    box-shadow: 0 0 8px rgba(191,95,255,0.4);
+  .lang-btn[data-lang="ar"] {
+    font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif;
+    letter-spacing: 1px;
   }
-  #btn-lang.is-ar {
-    border-color: var(--neon-purple);
-    color: var(--neon-purple);
-    box-shadow: 0 0 8px rgba(191,95,255,0.3);
+  .lang-btn.active {
+    border-color: var(--neon-cyan);
+    color: var(--neon-cyan);
+    box-shadow: 0 0 14px rgba(0,245,255,0.4);
+  }
+  .lang-btn:not(.active):hover {
+    border-color: rgba(0,245,255,0.4);
+    color: var(--text);
   }
 </style>
 </head>
@@ -562,8 +560,6 @@
     </button>
   </div>
 
-  <button id="btn-lang" title="Switch language">EN</button>
-
   <div id="hearts" style="margin-left:auto">
     <span class="heart">♥</span>
     <span class="heart">♥</span>
@@ -598,6 +594,10 @@
     Words drift across the screen. <span>Type the glowing word</span> to destroy it.<br>
     Miss a word and lose a ♥. Chain words for a <span>combo multiplier</span>.<br>
     10 levels of escalating chaos await you.
+  </div>
+  <div id="lang-selector">
+    <button class="lang-btn active" data-lang="en">English</button>
+    <button class="lang-btn" data-lang="ar">العربية</button>
   </div>
   <button class="big-btn" id="start-btn">Start Game</button>
   <div id="high-score-line"></div>
@@ -1327,29 +1327,21 @@ document.addEventListener('keydown', e => {
 });
 
 // ═══════════════════════════════════════════════════
-//  LANGUAGE TOGGLE
+//  LANGUAGE SELECTOR
 // ═══════════════════════════════════════════════════
-const btnLang = document.getElementById('btn-lang');
-
 function updateLangButton() {
-  if (state.language === 'ar') {
-    btnLang.textContent = 'عر';
-    btnLang.classList.add('is-ar');
-    mobileInput.lang = 'ar';
-    mobileInput.dir = 'rtl';
-  } else {
-    btnLang.textContent = 'EN';
-    btnLang.classList.remove('is-ar');
-    mobileInput.lang = 'en';
-    mobileInput.dir = 'ltr';
-  }
+  document.querySelectorAll('.lang-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.lang === state.language);
+  });
+  mobileInput.lang = state.language;
+  mobileInput.dir = state.language === 'ar' ? 'rtl' : 'ltr';
 }
 
-btnLang.addEventListener('click', () => {
-  state.language = state.language === 'en' ? 'ar' : 'en';
-  updateLangButton();
-  // reset mid-game so no English/Arabic words are mixed on screen
-  if (state.running || state.paused) resetGame();
+document.querySelectorAll('.lang-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    state.language = btn.dataset.lang;
+    updateLangButton();
+  });
 });
 
 // show high score on start screen
