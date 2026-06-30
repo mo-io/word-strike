@@ -511,6 +511,15 @@
     border-color: rgba(0,245,255,0.4);
     color: var(--text);
   }
+
+  /* ── OVERLAY RTL (Arabic mode) ── */
+  #overlay.rtl {
+    direction: rtl;
+  }
+  #overlay.rtl .instructions {
+    font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif;
+    line-height: 2;
+  }
 </style>
 </head>
 <body>
@@ -631,6 +640,42 @@ const WORDS_AR = {
   5: ['استراتيجية','إلكترونيات','بيروقراطية','إمبراطورية','ديموغرافية','استراتيجيات','تكنولوجيات','فيزيولوجيا','أنثروبولوجيا'],
 };
 const ALL_WORDS_AR_BY_TIER = [null, ...Object.values(WORDS_AR)];
+
+// ═══════════════════════════════════════════════════
+//  UI STRINGS  (English / Arabic)
+// ═══════════════════════════════════════════════════
+const STRINGS = {
+  en: {
+    title:        'Word Strike',
+    sub:          'Type Faster. Go Further.',
+    instructions: `Words drift across the screen. <span>Type the glowing word</span> to destroy it.<br>
+    Miss a word and lose a ♥. Chain words for a <span>combo multiplier</span>.<br>
+    10 levels of escalating chaos await you.`,
+    startBtn:     'Start Game',
+    playAgain:    'Play Again',
+    best:         n => `Best: ${n}`,
+    gameOver:     'Game Over',
+    statScore:    'Score',
+    statWpm:      'WPM',
+    statAcc:      'Accuracy',
+    statWords:    'Words',
+  },
+  ar: {
+    title:        'اضرب الكلمة',
+    sub:          'اكتب أسرع. تقدم أبعد.',
+    instructions: `تنزلق الكلمات عبر الشاشة. <span>اكتب الكلمة المضيئة</span> لتدميرها.<br>
+    أخطئ كلمة وتخسر ♥. تتابع الكلمات للحصول على <span>مضاعف الكومبو</span>.<br>
+    10 مستويات من الفوضى المتصاعدة تنتظرك.`,
+    startBtn:     'ابدأ اللعبة',
+    playAgain:    'العب مرة أخرى',
+    best:         n => `أفضل: ${n}`,
+    gameOver:     'انتهت اللعبة',
+    statScore:    'النتيجة',
+    statWpm:      'ك/د',
+    statAcc:      'الدقة',
+    statWords:    'الكلمات',
+  },
+};
 
 // ═══════════════════════════════════════════════════
 //  LEVEL CONFIG
@@ -1209,16 +1254,19 @@ function gameOver() {
   const newHS = Math.max(prev, state.score);
   localStorage.setItem('ws_hs', newHS);
 
-  overlayTitle.textContent = 'Game Over';
+  overlayMode = 'gameover';
+  const s = STRINGS[state.language];
+  overlayTitle.textContent = s.gameOver;
   overlaySub.innerHTML = `
     <div class="stat-grid">
-      <div><div class="sg-label">Score</div><div class="sg-val">${state.score.toLocaleString()}</div></div>
-      <div><div class="sg-label">WPM</div><div class="sg-val">${wpm}</div></div>
-      <div><div class="sg-label">Accuracy</div><div class="sg-val">${acc}%</div></div>
-      <div><div class="sg-label">Words</div><div class="sg-val">${state.wordsCompleted}</div></div>
+      <div><div class="sg-label">${s.statScore}</div><div class="sg-val">${state.score.toLocaleString()}</div></div>
+      <div><div class="sg-label">${s.statWpm}</div><div class="sg-val">${wpm}</div></div>
+      <div><div class="sg-label">${s.statAcc}</div><div class="sg-val">${acc}%</div></div>
+      <div><div class="sg-label">${s.statWords}</div><div class="sg-val">${state.wordsCompleted}</div></div>
     </div>`;
-  startBtn.textContent = 'Play Again';
-  highScoreLine.textContent = `Best: ${newHS.toLocaleString()}`;
+  startBtn.textContent = s.playAgain;
+  highScoreLine.textContent = s.best(newHS.toLocaleString());
+  overlay.classList.toggle('rtl', state.language === 'ar');
   overlay.classList.remove('hidden');
   syncMenuButtons();
 }
@@ -1282,12 +1330,8 @@ function resetGame() {
   blurMobileInput();
 
   // restore start screen
-  overlayTitle.textContent = 'Word Strike';
-  overlaySub.textContent = 'Type Faster. Go Further.';
-  startBtn.textContent = 'Start Game';
-  const storedHS = localStorage.getItem('ws_hs');
-  highScoreLine.textContent = storedHS && storedHS !== '0'
-    ? `Best: ${parseInt(storedHS).toLocaleString()}` : '';
+  overlayMode = 'start';
+  applyOverlayStrings();
   overlay.classList.remove('hidden');
   syncMenuButtons();
 }
@@ -1329,12 +1373,42 @@ document.addEventListener('keydown', e => {
 // ═══════════════════════════════════════════════════
 //  LANGUAGE SELECTOR
 // ═══════════════════════════════════════════════════
+let overlayMode = 'start'; // 'start' | 'gameover'
+
+function applyOverlayStrings() {
+  const s = STRINGS[state.language];
+  const isAr = state.language === 'ar';
+  overlay.classList.toggle('rtl', isAr);
+
+  if (overlayMode === 'gameover') {
+    overlayTitle.textContent = s.gameOver;
+    startBtn.textContent = s.playAgain;
+    // re-label stat grid if already rendered
+    const labels = overlay.querySelectorAll('.sg-label');
+    if (labels.length === 4) {
+      labels[0].textContent = s.statScore;
+      labels[1].textContent = s.statWpm;
+      labels[2].textContent = s.statAcc;
+      labels[3].textContent = s.statWords;
+    }
+  } else {
+    overlayTitle.textContent = s.title;
+    overlaySub.textContent = s.sub;
+    overlay.querySelector('.instructions').innerHTML = s.instructions;
+    startBtn.textContent = s.startBtn;
+  }
+  const storedHS = localStorage.getItem('ws_hs');
+  highScoreLine.textContent = storedHS && storedHS !== '0'
+    ? s.best(parseInt(storedHS).toLocaleString()) : '';
+}
+
 function updateLangButton() {
   document.querySelectorAll('.lang-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.lang === state.language);
   });
   mobileInput.lang = state.language;
   mobileInput.dir = state.language === 'ar' ? 'rtl' : 'ltr';
+  applyOverlayStrings();
 }
 
 document.querySelectorAll('.lang-btn').forEach(btn => {
@@ -1344,12 +1418,7 @@ document.querySelectorAll('.lang-btn').forEach(btn => {
   });
 });
 
-// show high score on start screen
-const storedHS = localStorage.getItem('ws_hs');
-if (storedHS && storedHS !== '0') {
-  highScoreLine.textContent = `Best: ${parseInt(storedHS).toLocaleString()}`;
-}
-overlaySub.textContent = 'Type Faster. Go Further.';
+applyOverlayStrings();
 </script>
 </body>
 </html>
