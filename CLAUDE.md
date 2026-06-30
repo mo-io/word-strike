@@ -29,6 +29,7 @@ Then open `http://localhost:3737/typing-game.html`. The `.claude/launch.json` is
 Words drift left across the screen as glowing neon tiles. The player types the currently highlighted word to destroy it with a particle explosion. Letting a word escape off the left edge costs a life (♥) and resets the combo. The game ends at 0 HP. 10 levels of escalating speed and word difficulty; level 10 is "Infinite Mode" with no further scaling.
 
 **HUD stats:** WPM (rolling 10-second window) · Accuracy (%) · Score · Combo multiplier · Level badge · Hearts (HP)
+On mobile (≤520px) Accuracy and Combo are hidden to fit the compact single-row HUD.
 
 **Scoring:**
 - Base: `word.length × 10 × combo` points per word
@@ -70,19 +71,21 @@ Two booleans govern everything: `state.running` and `state.paused`.
 | Paused | `true` | `true` |
 
 Lifecycle functions:
-- `startGame()` — resets all counters, hides the main overlay, starts loops.
-- `pauseGame()` — cancels RAF + interval, shows `#pause-overlay`, freezes tiles in place.
-- `resumeGame()` — hides pause overlay, resets `lastMove`, restarts RAF + interval.
-- `resetGame()` — full teardown (removes all tiles, cancels loops), restores the start-screen overlay.
-- `gameOver()` — stops loops, saves high score, shows game-over stats in the main overlay.
+- `startGame()` — resets all counters, hides the main overlay, starts loops, calls `focusMobileInput()`.
+- `pauseGame()` — cancels RAF + interval, shows `#pause-overlay`, freezes tiles in place, calls `blurMobileInput()`.
+- `resumeGame()` — hides pause overlay, resets `lastMove`, restarts RAF + interval, calls `focusMobileInput()`.
+- `resetGame()` — full teardown (removes all tiles, cancels loops), restores the start-screen overlay, calls `blurMobileInput()`.
+- `gameOver()` — stops loops, saves high score, shows game-over stats in the main overlay, calls `blurMobileInput()`.
 
 **`syncMenuButtons()` must be called after every state transition** — it updates the disabled/enabled state and label of the three HUD menu buttons (`#btn-start`, `#btn-stop`, `#btn-reset`). Missing a call will leave buttons in a stale state.
 
 ### Menu controls (HUD)
 Three compact buttons live in `#menu-controls` inside the HUD bar, between the level badge and the hearts:
-- **▶ Start / Resume** (`#btn-start`) — calls `startGame()` when idle, `resumeGame()` when paused. Label changes dynamically.
+- **▶ Start / Resume** (`#btn-start`) — calls `startGame()` when idle, `resumeGame()` when paused. Label changes dynamically via `.menu-label` span (targeted by `syncMenuButtons()`).
 - **⏸ Pause** (`#btn-stop`) — calls `pauseGame()`. Disabled unless actively playing.
 - **↺ Reset** (`#btn-reset`) — calls `resetGame()`. Disabled when idle. Styled with `.is-danger` for pink hover.
+
+Button text spans use class `.menu-label`; keyboard hint spans use `.menu-key`. Both are hidden on mobile via media query (buttons show icon only).
 
 The pause overlay (`#pause-overlay`) is semi-transparent so the player can see the frozen word positions. It contains its own Resume and Reset buttons wired to the same functions.
 
@@ -101,4 +104,24 @@ The pause overlay (`#pause-overlay`) is semi-transparent so the player can see t
 - CSS custom properties on `:root` for all neon colors (`--neon-cyan`, `--neon-green`, `--neon-pink`, `--neon-yellow`, `--neon-purple`) — change here to retheme.
 - `body.shake` triggers a keyframe animation for screen shake on HP loss.
 - `.menu-btn.is-active` → cyan glow. `.menu-btn.is-danger` → pink on hover. Both toggled by `syncMenuButtons()`.
-- HUD is `position:fixed`, `z-index:10`; pause overlay is `z-index:15`; main overlay (start/game-over) is `z-index:20`; level-up splash is `z-index:25`.
+- HUD is `position:fixed`, `z-index:10`; pause overlay is `z-index:15`; main overlay (start/game-over) is `z-index:20`; level-up splash is `z-index:25`; tap hint is `z-index:6`.
+- `@media (max-width: 520px)` — compact HUD (44px), icon-only buttons, hidden Acc/Combo stats, smaller tiles and hearts.
+
+### Mobile support
+The game is fully playable on smartphones. Key implementation details:
+
+**Virtual keyboard** — a hidden `<input id="mobile-input">` (positioned at `top: -200px`, `opacity: 0`) is focused programmatically on game start/resume. This is the only reliable cross-browser way to trigger the software keyboard. `font-size: 16px` prevents iOS Safari from auto-zooming on focus.
+
+**Input routing** — `isMobile` (`'ontouchstart' in window || navigator.maxTouchPoints > 0`) gates the two input paths:
+- Desktop: `keydown` on `document` (unchanged, fires regardless of focus)
+- Mobile: `input` event on `#mobile-input`; `e.data` holds the typed character; value is cleared immediately after each keystroke so `e.data` is always a single char
+
+Both paths call `processChar(key)` — a shared function extracted from the original keydown handler.
+
+**Viewport** — `resizeCanvases()` and `spawnWord()` both read `window.visualViewport.height` (fallback: `window.innerHeight`) so words never spawn behind the software keyboard. A `visualViewport.resize` listener re-runs canvas resize when the keyboard slides in/out.
+
+**Tap-to-type hint** — `<div id="tap-hint">` is shown when `#mobile-input` loses focus during active play (keyboard dismissed). Tapping it, or tapping `#game-area`, re-focuses the hidden input. The hint hides again on `focus`.
+
+**Mobile input helpers** (called by lifecycle functions):
+- `focusMobileInput()` — no-op on desktop; on mobile calls `mobileInput.focus()` in an 80ms `setTimeout` to stay within the user-gesture context window required by browsers.
+- `blurMobileInput()` — blurs input and hides tap hint; called on pause/game-over/reset to dismiss the keyboard.
