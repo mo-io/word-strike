@@ -468,6 +468,50 @@
     .instructions { font-size: 12px; max-width: 90%; margin-bottom: 24px; }
     .overlay-sub { margin-bottom: 24px; font-size: 12px; }
     .big-btn { padding: 12px 30px; font-size: 14px; }
+
+    /* tighter HUD to fit the language button */
+    #hud { gap: 4px; }
+    #menu-controls { gap: 2px; }
+    .menu-btn { min-width: 26px; }
+    #btn-lang { font-size: 9px; padding: 3px 5px; min-width: 24px; }
+  }
+
+  /* ── ARABIC WORD TILES ── */
+  .word-tile.arabic {
+    direction: rtl;
+    letter-spacing: 0;
+    font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif;
+  }
+
+  /* ── HUD LANGUAGE BUTTON ── */
+  #btn-lang {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    border: 1px solid rgba(191,95,255,0.3);
+    color: var(--dim);
+    font-family: inherit;
+    font-size: 10px;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    min-width: 40px;
+    text-transform: uppercase;
+    touch-action: manipulation;
+    flex-shrink: 0;
+  }
+  #btn-lang:hover {
+    border-color: var(--neon-purple);
+    color: var(--neon-purple);
+    box-shadow: 0 0 8px rgba(191,95,255,0.4);
+  }
+  #btn-lang.is-ar {
+    border-color: var(--neon-purple);
+    color: var(--neon-purple);
+    box-shadow: 0 0 8px rgba(191,95,255,0.3);
   }
 </style>
 </head>
@@ -517,6 +561,8 @@
       <span class="menu-key">R</span>
     </button>
   </div>
+
+  <button id="btn-lang" title="Switch language">EN</button>
 
   <div id="hearts" style="margin-left:auto">
     <span class="heart">♥</span>
@@ -575,6 +621,18 @@ const WORDS = {
 const ALL_WORDS_BY_TIER = [null, ...Object.values(WORDS)];
 
 // ═══════════════════════════════════════════════════
+//  ARABIC WORD LISTS  (5 tiers by length/difficulty)
+// ═══════════════════════════════════════════════════
+const WORDS_AR = {
+  1: ['في','من','هو','هي','لا','ما','أو','قد','مع','عن','كم','هم','أي','لي','له','لك','حب','دم','يد','أم','أب','كل','على','إلى','أنا','نعم','أنت','هذا','هنا','كان','قال','رأى','جاء','ذهب','قبل','بعد','فوق','تحت','أحد','شمس','قمر','أرض','ماء','نار','بحر','عين','وجه','يوم','ليل','وطن','صحة','أمل','حلم','أمن','علم','فكر','قوة','حكم'],
+  2: ['كتاب','شكرا','أهلا','بلاد','جبال','نجوم','عيون','قلوب','بيوت','كلام','مكان','زمان','رجال','نساء','أيام','شهور','سنين','كلمة','جملة','أسرة','دولة','قرية','طريق','قطار','مطعم','فندق','متحف','نهار','شباب','سماء','إنسان','حيوان','حكاية','رياضة','طبيعة','مدينة','سيارة','طائرة','سفينة','حافلة','مكتبة','جامعة','مدرسة','أفكار','أحلام','أصوات','أرواح'],
+  3: ['مستقبل','مستشفى','موسيقى','اقتصاد','اجتماع','برلمان','اختراع','انتخاب','احتفال','اعتراف','اهتمام','اختصاص','ابتكار','استقلال','استخدام','جغرافيا','رياضيات','استقبال','جمهورية','استثمار','استعداد','اقتصادي','اجتماعي'],
+  4: ['تكنولوجيا','ديمقراطية','مسؤوليات','مستخدمين','احتياجات','اكتشافات','اختبارات','ابتكارات','بيولوجيا','جيولوجيا','سيكولوجيا','اختصاصات'],
+  5: ['استراتيجية','إلكترونيات','بيروقراطية','إمبراطورية','ديموغرافية','استراتيجيات','تكنولوجيات','فيزيولوجيا','أنثروبولوجيا'],
+};
+const ALL_WORDS_AR_BY_TIER = [null, ...Object.values(WORDS_AR)];
+
+// ═══════════════════════════════════════════════════
 //  LEVEL CONFIG
 // ═══════════════════════════════════════════════════
 const LEVEL_SCORE = [0,0,500,1500,3500,7000,12000,20000,32000,50000,75000];
@@ -598,6 +656,7 @@ const LEVEL_CFG = [null,
 let state = {
   running: false,
   paused: false,
+  language: 'en',   // 'en' | 'ar'
   level: 1,
   score: 0,
   hp: 5,
@@ -744,7 +803,8 @@ function pickWord() {
     cum += cfg.tiers[t];
     if (roll < cum) { tier = t; break; }
   }
-  const pool = ALL_WORDS_BY_TIER[tier];
+  const wordsByTier = state.language === 'ar' ? ALL_WORDS_AR_BY_TIER : ALL_WORDS_BY_TIER;
+  const pool = wordsByTier[tier];
   // avoid duplicates
   const active = Object.values(state.tiles).map(t => t.word);
   let candidates = pool.filter(w => !active.includes(w));
@@ -773,7 +833,8 @@ function spawnWord() {
   el.style.right = '-200px';
   el.style.top = y + 'px';
 
-  // build char spans
+  // build char spans; arabic tiles get RTL class
+  if (state.language === 'ar') el.classList.add('arabic');
   el.innerHTML = word.split('').map(c => `<span class="char">${c}</span>`).join('');
   gameArea.appendChild(el);
 
@@ -1263,6 +1324,32 @@ document.addEventListener('keydown', e => {
     if (state.paused) { resetGame(); return; }
     if (!state.running && !overlay.classList.contains('hidden')) { resetGame(); return; }
   }
+});
+
+// ═══════════════════════════════════════════════════
+//  LANGUAGE TOGGLE
+// ═══════════════════════════════════════════════════
+const btnLang = document.getElementById('btn-lang');
+
+function updateLangButton() {
+  if (state.language === 'ar') {
+    btnLang.textContent = 'عر';
+    btnLang.classList.add('is-ar');
+    mobileInput.lang = 'ar';
+    mobileInput.dir = 'rtl';
+  } else {
+    btnLang.textContent = 'EN';
+    btnLang.classList.remove('is-ar');
+    mobileInput.lang = 'en';
+    mobileInput.dir = 'ltr';
+  }
+}
+
+btnLang.addEventListener('click', () => {
+  state.language = state.language === 'en' ? 'ar' : 'en';
+  updateLangButton();
+  // reset mid-game so no English/Arabic words are mixed on screen
+  if (state.running || state.paused) resetGame();
 });
 
 // show high score on start screen
