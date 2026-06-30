@@ -370,16 +370,20 @@
   /* ── MOBILE INPUT (hidden; keeps focus to show virtual keyboard) ── */
   #mobile-input {
     position: fixed;
-    top: -200px;
+    top: 0;
     left: 0;
-    width: 100%;
+    width: 1px;
     height: 1px;
     opacity: 0;
-    z-index: -1;
+    z-index: 1;
     font-size: 16px; /* prevents iOS auto-zoom on focus */
-    pointer-events: none;
     border: none;
     background: transparent;
+    color: transparent;
+    outline: none;
+    caret-color: transparent;
+    user-select: text;
+    -webkit-user-select: text;
   }
 
   /* ── TAP TO TYPE HINT ── */
@@ -968,8 +972,7 @@ mobileInput.addEventListener('focus', () => {
 
 function focusMobileInput() {
   if (!isMobile) return;
-  // setTimeout ensures we're still within the user-gesture context window
-  setTimeout(() => mobileInput.focus(), 80);
+  mobileInput.focus();
 }
 
 function blurMobileInput() {
