@@ -366,6 +366,105 @@
     80% { transform: translate(4px, -2px); }
   }
   body.shake { animation: shake 0.35s ease; }
+
+  /* ── MOBILE INPUT (hidden; keeps focus to show virtual keyboard) ── */
+  #mobile-input {
+    position: fixed;
+    top: -200px;
+    left: 0;
+    width: 100%;
+    height: 1px;
+    opacity: 0;
+    z-index: -1;
+    font-size: 16px; /* prevents iOS auto-zoom on focus */
+    pointer-events: none;
+    border: none;
+    background: transparent;
+  }
+
+  /* ── TAP TO TYPE HINT ── */
+  #tap-hint {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: rgba(0,245,255,0.7);
+    text-transform: uppercase;
+    z-index: 6;
+    display: none;
+    pointer-events: auto;
+    cursor: pointer;
+    padding: 10px 22px;
+    border: 1px solid rgba(0,245,255,0.3);
+    border-radius: 20px;
+    background: rgba(6,6,20,0.88);
+    white-space: nowrap;
+    animation: tapPulse 2s ease-in-out infinite;
+    touch-action: manipulation;
+    font-family: inherit;
+  }
+  @keyframes tapPulse {
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 1; }
+  }
+
+  /* remove 300ms tap delay on all interactive elements */
+  .big-btn, .menu-btn { touch-action: manipulation; }
+
+  #hearts { flex-shrink: 0; }
+  #level-badge { white-space: nowrap; flex-shrink: 0; }
+
+  /* ── RESPONSIVE — compact HUD for phones ── */
+  @media (max-width: 520px) {
+    #hud {
+      height: 44px;
+      padding: 0 10px;
+      gap: 6px;
+    }
+    #game-area { top: 44px; }
+
+    .stat { min-width: 36px; }
+    .stat-label { display: none; }
+    .stat-value { font-size: 13px; }
+
+    /* hide Accuracy and Combo to make room */
+    #stat-acc, #stat-combo { display: none; }
+
+    #level-badge { font-size: 9px; padding: 2px 7px; }
+
+    #menu-controls { gap: 3px; margin: 0 2px; }
+    .menu-btn { min-width: 30px; padding: 5px 7px; }
+    .menu-btn .menu-icon { font-size: 15px; }
+    .menu-btn .menu-label { display: none; }
+    .menu-btn .menu-key  { display: none; }
+
+    .heart { font-size: 15px; }
+    #hearts { gap: 2px; }
+
+    .word-tile {
+      font-size: 16px;
+      padding: 6px 10px;
+      letter-spacing: 1px;
+      border-radius: 6px;
+    }
+
+    #pause-card {
+      padding: 24px 28px;
+      margin: 0 16px;
+      width: calc(100% - 32px);
+    }
+    #pause-card h2 { font-size: 28px; letter-spacing: 4px; }
+    .pause-actions { flex-direction: column; gap: 10px; align-items: center; }
+
+    #level-splash { padding: 18px 28px; }
+    #level-splash h2 { font-size: 24px; letter-spacing: 3px; }
+
+    .instructions { font-size: 12px; max-width: 90%; margin-bottom: 24px; }
+    .overlay-sub { margin-bottom: 24px; font-size: 12px; }
+    .big-btn { padding: 12px 30px; font-size: 14px; }
+  }
 </style>
 </head>
 <body>
@@ -373,20 +472,25 @@
 <canvas id="bg-canvas"></canvas>
 <canvas id="fx-canvas"></canvas>
 
+<!-- Hidden input to trigger mobile virtual keyboard -->
+<input id="mobile-input" type="text"
+  autocomplete="off" autocorrect="off" autocapitalize="off"
+  spellcheck="false" inputmode="text">
+
 <div id="hud">
-  <div class="stat">
+  <div class="stat" id="stat-wpm">
     <span class="stat-label">WPM</span>
     <span class="stat-value" id="wpm-val">0</span>
   </div>
-  <div class="stat">
+  <div class="stat" id="stat-acc">
     <span class="stat-label">Acc</span>
     <span class="stat-value" id="acc-val">—</span>
   </div>
-  <div class="stat">
+  <div class="stat" id="stat-score">
     <span class="stat-label">Score</span>
     <span class="stat-value" id="score-val">0</span>
   </div>
-  <div class="stat">
+  <div class="stat" id="stat-combo">
     <span class="stat-label">Combo</span>
     <span id="combo-display">×1</span>
   </div>
@@ -395,17 +499,17 @@
   <div id="menu-controls">
     <button class="menu-btn is-active" id="btn-start">
       <span class="menu-icon">▶</span>
-      <span>Start</span>
+      <span class="menu-label">Start</span>
       <span class="menu-key">Enter</span>
     </button>
     <button class="menu-btn" id="btn-stop" disabled>
       <span class="menu-icon">⏸</span>
-      <span>Pause</span>
+      <span class="menu-label">Pause</span>
       <span class="menu-key">Esc</span>
     </button>
     <button class="menu-btn is-danger" id="btn-reset" disabled>
       <span class="menu-icon">↺</span>
-      <span>Reset</span>
+      <span class="menu-label">Reset</span>
       <span class="menu-key">R</span>
     </button>
   </div>
@@ -448,6 +552,8 @@
   <button class="big-btn" id="start-btn">Start Game</button>
   <div id="high-score-line"></div>
 </div>
+
+<div id="tap-hint">⌨ Tap to type</div>
 
 <script>
 // ═══════════════════════════════════════════════════
@@ -511,6 +617,8 @@ let state = {
 // ═══════════════════════════════════════════════════
 //  DOM REFS
 // ═══════════════════════════════════════════════════
+const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
 const bgCanvas = document.getElementById('bg-canvas');
 const fxCanvas = document.getElementById('fx-canvas');
 const bgCtx = bgCanvas.getContext('2d');
@@ -536,15 +644,21 @@ const btnReset = document.getElementById('btn-reset');
 const pauseOverlay = document.getElementById('pause-overlay');
 const resumeBtn = document.getElementById('resume-btn');
 const resetFromPauseBtn = document.getElementById('reset-from-pause-btn');
+const mobileInput = document.getElementById('mobile-input');
+const tapHint = document.getElementById('tap-hint');
 
 // ═══════════════════════════════════════════════════
 //  CANVAS RESIZE
 // ═══════════════════════════════════════════════════
 function resizeCanvases() {
   bgCanvas.width = fxCanvas.width = window.innerWidth;
-  bgCanvas.height = fxCanvas.height = window.innerHeight;
+  bgCanvas.height = fxCanvas.height =
+    window.visualViewport ? window.visualViewport.height : window.innerHeight;
 }
 window.addEventListener('resize', resizeCanvases);
+if (window.visualViewport) {
+  window.visualViewport.addEventListener('resize', resizeCanvases);
+}
 resizeCanvases();
 
 // ═══════════════════════════════════════════════════
@@ -644,8 +758,10 @@ function spawnWord() {
 
   const word = pickWord();
   const id = state.nextId++;
-  const areaH = window.innerHeight - 56;
-  const y = 56 + 20 + Math.random() * (areaH - 80);
+  const hudH = document.getElementById('hud').offsetHeight;
+  const vph = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+  const areaH = vph - hudH;
+  const y = hudH + 20 + Math.random() * Math.max(areaH - 80, 40);
 
   const el = document.createElement('div');
   el.className = 'word-tile';
@@ -789,14 +905,9 @@ fxLoop();
 // ═══════════════════════════════════════════════════
 //  INPUT HANDLING
 // ═══════════════════════════════════════════════════
-document.addEventListener('keydown', e => {
-  if (!state.running || state.paused) return;
-  if (e.ctrlKey || e.metaKey || e.altKey) return;
-  const key = e.key;
+function processChar(key) {
   if (key.length !== 1) return;
-  e.preventDefault();
   initAudio();
-
   const id = state.activeId;
   if (id === null) return;
   const t = state.tiles[id];
@@ -810,20 +921,62 @@ document.addEventListener('keydown', e => {
     t.typed++;
     updateTileChars(t);
     playKeyTick();
-    // log for WPM
     state.wpmWindow.push({time: Date.now(), chars: 1});
-
-    if (t.typed === t.word.length) {
-      // word complete!
-      wordComplete(id, t);
-    }
+    if (t.typed === t.word.length) wordComplete(id, t);
   } else {
-    // wrong key
     flashError(t);
     playError();
   }
   updateHUD();
+}
+
+// Desktop: keydown on document captures all keypresses regardless of focus
+document.addEventListener('keydown', e => {
+  if (!state.running || state.paused) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const key = e.key;
+  if (key.length !== 1) return;
+  if (isMobile) return; // mobile routes through mobileInput's input event
+  e.preventDefault();
+  processChar(key);
 });
+
+// Mobile: input event on hidden element captures virtual keyboard characters
+mobileInput.addEventListener('input', e => {
+  if (!state.running || state.paused) return;
+  const char = e.data;
+  mobileInput.value = ''; // keep it empty so each keystroke is a fresh e.data
+  if (!char) return;
+  processChar(char[0]);
+});
+
+// Tap anywhere on game area to re-show keyboard if it was dismissed
+gameArea.addEventListener('touchstart', () => {
+  if (state.running && !state.paused) mobileInput.focus();
+}, { passive: true });
+
+// Tap-hint tapped: refocus
+tapHint.addEventListener('click', () => mobileInput.focus());
+
+// Show tap-hint when keyboard is dismissed during active play
+mobileInput.addEventListener('blur', () => {
+  if (state.running && !state.paused) tapHint.style.display = 'block';
+});
+mobileInput.addEventListener('focus', () => {
+  tapHint.style.display = 'none';
+});
+
+function focusMobileInput() {
+  if (!isMobile) return;
+  // setTimeout ensures we're still within the user-gesture context window
+  setTimeout(() => mobileInput.focus(), 80);
+}
+
+function blurMobileInput() {
+  if (!isMobile) return;
+  mobileInput.blur();
+  tapHint.style.display = 'none';
+}
 
 function updateTileChars(t) {
   const spans = t.el.querySelectorAll('.char');
@@ -970,6 +1123,7 @@ function startGame() {
   // spawn first word immediately, then on interval
   spawnWord();
   restartSpawnTimer();
+  focusMobileInput();
 }
 
 function gameOver() {
@@ -983,6 +1137,8 @@ function gameOver() {
   const wpm = calcWPM();
   const acc = state.totalKeys > 0
     ? Math.round(state.correctKeys / state.totalKeys * 100) : 0;
+
+  blurMobileInput();
 
   // save high score
   const prev = parseInt(localStorage.getItem('ws_hs') || '0');
@@ -1014,7 +1170,7 @@ function syncMenuButtons() {
   // START button: available when idle or paused; label changes
   btnStart.disabled = running;
   btnStart.classList.toggle('is-active', idle || paused);
-  btnStart.querySelector('span:nth-child(2)').textContent = paused ? 'Resume' : 'Start';
+  btnStart.querySelector('.menu-label').textContent = paused ? 'Resume' : 'Start';
 
   // STOP / Pause button: available only while actively running
   btnStop.disabled = !running;
@@ -1033,6 +1189,7 @@ function pauseGame() {
   cancelAnimationFrame(state.moveRaf);
   clearInterval(state.spawnTimer);
   pauseOverlay.classList.remove('hidden');
+  blurMobileInput();
   syncMenuButtons();
 }
 
@@ -1043,6 +1200,7 @@ function resumeGame() {
   lastMove = performance.now();
   state.moveRaf = requestAnimationFrame(moveLoop);
   restartSpawnTimer();
+  focusMobileInput();
   syncMenuButtons();
 }
 
@@ -1056,6 +1214,8 @@ function resetGame() {
   state.tiles = {};
   state.activeId = null;
   state.particles = [];
+
+  blurMobileInput();
 
   // restore start screen
   overlayTitle.textContent = 'Word Strike';
