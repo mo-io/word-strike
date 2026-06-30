@@ -2,7 +2,23 @@
   "permissions": {
     "allow": [
       "PowerShell($g = Get-Command git -ErrorAction SilentlyContinue; if \\($g\\) { Write-Output \"INSTALLED: $\\($g.Source\\)\"; git --version } else { Write-Output \"NOT INSTALLED\" })",
-      "PowerShell($gh = \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\"; & $gh auth status; Write-Output \"--- credential helper ---\"; git config --global credential.helper)"
+      "PowerShell($gh = \"C:\\\\Program Files\\\\GitHub CLI\\\\gh.exe\"; & $gh auth status; Write-Output \"--- credential helper ---\"; git config --global credential.helper)",
+      "Bash(gh auth *)",
+      "Bash(gh repo *)",
+      "Bash(vercel --version)",
+      "Bash(git commit -m ' *)",
+      "Bash(ls \"C:/Users/Mo/.claude/projects/C--Users-Mo-Claude-Projects-Typing-Game/memory/\" && echo \"---\" && ls \"C:/Users/Mo/.claude/projects/\" 2>/dev/null)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(python -m http.server 3939 --bind 127.0.0.1)",
+      "Bash(git push *)",
+      "Read(//c/Users/Mo/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/40c13a1e-e471-4f15-a6f2-4ec5f26f63b0/52548517-1a58-425f-af48-17705bc48326/skills/**)",
+      "Read(//c/Users/Mo/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/40c13a1e-e471-4f15-a6f2-4ec5f26f63b0/52548517-1a58-425f-af48-17705bc48326/skills/skill-creator/**)",
+      "Read(//c/Users/Mo/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/40c13a1e-e471-4f15-a6f2-4ec5f26f63b0/52548517-1a58-425f-af48-17705bc48326/**)",
+      "Bash(SKILLS=\"C:/Users/Mo/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/40c13a1e-e471-4f15-a6f2-4ec5f26f63b0/52548517-1a58-425f-af48-17705bc48326/skills\" *)",
+      "Bash(mkdir -p C:/Users/Mo/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/40c13a1e-e471-4f15-a6f2-4ec5f26f63b0/52548517-1a58-425f-af48-17705bc48326/handoff-notes-workspace/iteration-1/prs-game-exact-phrase/with_skill/outputs)",
+      "Bash(mkdir -p C:/Users/Mo/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/40c13a1e-e471-4f15-a6f2-4ec5f26f63b0/52548517-1a58-425f-af48-17705bc48326/handoff-notes-workspace/iteration-1/prs-game-exact-phrase/without_skill/outputs)",
+      "Bash(mkdir -p C:/Users/Mo/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/40c13a1e-e471-4f15-a6f2-4ec5f26f63b0/52548517-1a58-425f-af48-17705bc48326/handoff-notes-workspace/iteration-1/typing-game-casual-phrase/with_skill/outputs)",
+      "Bash(mkdir -p C:/Users/Mo/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/40c13a1e-e471-4f15-a6f2-4ec5f26f63b0/52548517-1a58-425f-af48-17705bc48326/handoff-notes-workspace/iteration-1/typing-game-casual-phrase/without_skill/outputs)"
     ]
   }
 }
