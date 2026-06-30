@@ -110,7 +110,7 @@ The pause overlay (`#pause-overlay`) is semi-transparent so the player can see t
 ### Mobile support
 The game is fully playable on smartphones. Key implementation details:
 
-**Virtual keyboard** — a hidden `<input id="mobile-input">` (positioned at `top: -200px`, `opacity: 0`) is focused programmatically on game start/resume. This is the only reliable cross-browser way to trigger the software keyboard. `font-size: 16px` prevents iOS Safari from auto-zooming on focus.
+**Virtual keyboard** — a hidden `<input id="mobile-input">` (1×1px at `top:0; left:0; opacity:0`) is focused programmatically on game start/resume. This is the only reliable cross-browser way to trigger the software keyboard. `font-size: 16px` prevents iOS Safari from auto-zooming on focus. The input must be within the visible viewport — iOS silently refuses to show the keyboard for `position:fixed` inputs positioned off-screen.
 
 **Input routing** — `isMobile` (`'ontouchstart' in window || navigator.maxTouchPoints > 0`) gates the two input paths:
 - Desktop: `keydown` on `document` (unchanged, fires regardless of focus)
@@ -123,5 +123,30 @@ Both paths call `processChar(key)` — a shared function extracted from the orig
 **Tap-to-type hint** — `<div id="tap-hint">` is shown when `#mobile-input` loses focus during active play (keyboard dismissed). Tapping it, or tapping `#game-area`, re-focuses the hidden input. The hint hides again on `focus`.
 
 **Mobile input helpers** (called by lifecycle functions):
-- `focusMobileInput()` — no-op on desktop; on mobile calls `mobileInput.focus()` in an 80ms `setTimeout` to stay within the user-gesture context window required by browsers.
+- `focusMobileInput()` — no-op on desktop; on mobile calls `mobileInput.focus()` **synchronously** (no setTimeout) so the call stays within the user-gesture event handler iOS requires to show the keyboard.
 - `blurMobileInput()` — blurs input and hides tap hint; called on pause/game-over/reset to dismiss the keyboard.
+
+### Language support
+The game supports English and Arabic. Language is chosen on the start/game-over overlay before every game; it persists across resets but not page reloads (defaults to `'en'`).
+
+**State:**
+- `state.language` — `'en'` | `'ar'`; read by `pickWord()` and `spawnWord()`.
+- `overlayMode` — `'start'` | `'gameover'`; set by `resetGame()` and `gameOver()` so `applyOverlayStrings()` knows which text set to apply.
+
+**Word lists:**
+- `WORDS` / `ALL_WORDS_BY_TIER` — English, 5 tiers.
+- `WORDS_AR` / `ALL_WORDS_AR_BY_TIER` — Arabic, same 5-tier structure (grouped by character length).
+- `pickWord()` selects the correct tier list based on `state.language`.
+- `spawnWord()` adds class `arabic` to the tile element when Arabic is active.
+
+**UI strings:**
+- `STRINGS.en` / `STRINGS.ar` — all overlay-visible text: `title`, `sub`, `instructions` (HTML), `startBtn`, `playAgain`, `best(n)`, `gameOver`, `statScore`, `statWpm`, `statAcc`, `statWords`.
+- `applyOverlayStrings()` — applies `STRINGS[state.language]` to the overlay. In `'start'` mode updates title/subtitle/instructions/start-button. In `'gameover'` mode updates game-over title/stat-labels/play-again-button. Always updates the high-score line. Also toggles `#overlay.rtl` for RTL text direction.
+- `updateLangButton()` — syncs `.lang-btn` `.active` class, sets `mobileInput.lang` and `mobileInput.dir`, then calls `applyOverlayStrings()`.
+
+**Language selector UI:**
+- `#lang-selector` in `#overlay` — two `.lang-btn` buttons (`data-lang="en"` / `data-lang="ar"`). Active button glows cyan. Visible on both the start screen and game-over screen.
+
+**Arabic tile rendering:**
+- `.word-tile.arabic` — `direction: rtl; letter-spacing: 0; font-family: system-ui, …`. The browser's shaping engine correctly renders connected Arabic letterforms across individual `<span class="char">` elements when `letter-spacing` is 0.
+- `mobileInput.lang = 'ar'` and `mobileInput.dir = 'rtl'` hint the OS to suggest the Arabic keyboard layout on mobile.
