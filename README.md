@@ -54,3 +54,7 @@ See `CLAUDE.md` for the full architecture writeup.
 ## Deployment
 
 `vercel.json` rewrites `/` → `/typing-game.html` so the root URL serves the game directly.
+
+## License
+
+[MIT](LICENSE) © 2026 Mo
