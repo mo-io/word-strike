@@ -1067,9 +1067,66 @@ function getKbHeight() {
   return (!isMobile && document.body.classList.contains('kbd-visible')) ? KB_HEIGHT : 0;
 }
 
+// Map each key character to its hand (left or right)
+const KEY_HAND_MAP = {
+  // English QWERTY
+  'q': 'left', 'w': 'left', 'e': 'left', 'r': 'left', 't': 'left',
+  'a': 'left', 's': 'left', 'd': 'left', 'f': 'left', 'g': 'left',
+  'z': 'left', 'x': 'left', 'c': 'left', 'v': 'left', 'b': 'left',
+  'y': 'right', 'u': 'right', 'i': 'right', 'o': 'right', 'p': 'right',
+  'h': 'right', 'j': 'right', 'k': 'right', 'l': 'right',
+  'n': 'right', 'm': 'right',
+  ' ': 'right', // space
+  // Punctuation
+  '`': 'left', '1': 'left', '2': 'left', '3': 'left', '4': 'left', '5': 'left',
+  '6': 'right', '7': 'right', '8': 'right', '9': 'right', '0': 'right', '-': 'right', '=': 'right',
+  ';': 'right', "'": 'right', ',': 'right', '.': 'right', '/': 'right',
+  // Arabic 101
+  'ذ': 'left', '١': 'left', '٢': 'left', '٣': 'left', '٤': 'left', '٥': 'left',
+  '٦': 'right', '٧': 'right', '٨': 'right', '٩': 'right', '٠': 'right',
+  'ض': 'left', 'ص': 'left', 'ث': 'left', 'ق': 'left', 'ف': 'left',
+  'غ': 'right', 'ع': 'right', 'ه': 'right', 'خ': 'right', 'ح': 'right', 'ج': 'right', 'د': 'right',
+  'ش': 'left', 'س': 'left', 'ي': 'left', 'ب': 'left', 'ل': 'left',
+  'ا': 'right', 'ت': 'right', 'ن': 'right', 'م': 'right', 'ك': 'right', 'ط': 'right',
+  'ئ': 'left', 'ء': 'left', 'ؤ': 'left', 'ر': 'left', 'لا': 'left',
+  'ى': 'right', 'ة': 'right', 'و': 'right', 'ز': 'right', 'ظ': 'right',
+};
+
+function getHandForKey(key) {
+  return KEY_HAND_MAP[key] || 'left'; // default to left if not found
+}
+
 function buildKeyboard() {
-  kbPanel.innerHTML = '';
+  // Rebuild the SVG first (it will be cleared by innerHTML)
+  const svgHtml = `<svg id="hand-svg" viewBox="0 0 280 140" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="finger-glow">
+        <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+        <feMerge>
+          <feMergeNode in="coloredBlur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+    <g class="hand" data-hand="left">
+      <g class="finger" data-finger="thumb"><path class="finger-outline" d="M 40 80 L 45 100 L 50 115"/></g>
+      <g class="finger" data-finger="index"><path class="finger-outline" d="M 55 60 L 55 35 L 55 20"/></g>
+      <g class="finger" data-finger="middle"><path class="finger-outline" d="M 70 50 L 70 25 L 70 10"/></g>
+      <g class="finger" data-finger="ring"><path class="finger-outline" d="M 85 55 L 85 32 L 85 15"/></g>
+      <g class="finger" data-finger="pinky"><path class="finger-outline" d="M 100 70 L 100 48 L 100 32"/></g>
+    </g>
+    <g class="hand" data-hand="right">
+      <g class="finger" data-finger="index"><path class="finger-outline" d="M 225 60 L 225 35 L 225 20"/></g>
+      <g class="finger" data-finger="middle"><path class="finger-outline" d="M 210 50 L 210 25 L 210 10"/></g>
+      <g class="finger" data-finger="ring"><path class="finger-outline" d="M 195 55 L 195 32 L 195 15"/></g>
+      <g class="finger" data-finger="pinky"><path class="finger-outline" d="M 180 70 L 180 48 L 180 32"/></g>
+      <g class="finger" data-finger="thumb"><path class="finger-outline" d="M 240 80 L 235 100 L 230 115"/></g>
+    </g>
+  </svg>`;
+
+  kbPanel.innerHTML = svgHtml;
   kbPanel.classList.toggle('arabic', state.language === 'ar');
+
   const layout = KB_LAYOUT[state.language];
   const isAr = state.language === 'ar';
   layout.forEach(row => {
@@ -1080,6 +1137,7 @@ function buildKeyboard() {
       keyEl.className = 'kb-key';
       keyEl.dataset.key = key.k;
       keyEl.dataset.finger = key.f;
+      keyEl.dataset.hand = getHandForKey(key.k);
       keyEl.textContent = isAr ? key.k : key.k.toUpperCase();
       rowEl.appendChild(keyEl);
     });
