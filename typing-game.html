@@ -1157,7 +1157,10 @@ function hideKeyboard() {
 }
 
 function updateKeyboardHighlight() {
+  // Clear previous highlights
   kbPanel.querySelectorAll('.kb-key.lit').forEach(el => el.classList.remove('lit'));
+  kbPanel.querySelectorAll('.finger.active').forEach(el => el.classList.remove('active'));
+
   const id = state.activeId;
   if (id === null) return;
   const t = state.tiles[id];
@@ -1172,7 +1175,23 @@ function updateKeyboardHighlight() {
     searchKey = nextChar.replace(/[أإآٱ]/g, 'ا');
   }
   const keyEl = kbPanel.querySelector(`.kb-key[data-key="${CSS.escape(searchKey)}"]`);
-  if (keyEl) keyEl.classList.add('lit');
+  if (keyEl) {
+    // Highlight the key
+    keyEl.classList.add('lit');
+
+    // Also highlight the corresponding finger
+    const finger = keyEl.dataset.finger;
+    const hand = keyEl.dataset.hand;
+    const handSvg = kbPanel.querySelector('#hand-svg');
+    if (handSvg && finger && hand) {
+      const fingerGroup = handSvg.querySelector(
+        `.hand[data-hand="${hand}"] .finger[data-finger="${finger}"]`
+      );
+      if (fingerGroup) {
+        fingerGroup.classList.add('active');
+      }
+    }
+  }
 }
 
 // ═══════════════════════════════════════════════════
