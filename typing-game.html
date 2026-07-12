@@ -520,6 +520,73 @@
     font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif;
     line-height: 2;
   }
+
+  /* ── ON-SCREEN KEYBOARD (desktop only, shown during gameplay) ── */
+  #keyboard-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 160px;
+    background: rgba(6,6,20,0.94);
+    border-top: 1px solid rgba(0,245,255,0.12);
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 8px 0 10px;
+    z-index: 8;
+    backdrop-filter: blur(4px);
+  }
+
+  body.kbd-visible #keyboard-panel { display: flex; }
+  body.kbd-visible #game-area      { bottom: 160px; }
+
+  @media (max-width: 520px) {
+    #keyboard-panel { display: none !important; }
+    body.kbd-visible #game-area { bottom: 0; }
+  }
+
+  .kb-row {
+    display: flex;
+    gap: 3px;
+  }
+
+  .kb-key {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 30px;
+    padding: 0 5px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 4px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    color: var(--dim);
+    transition: border-color 0.08s, color 0.08s, box-shadow 0.08s, transform 0.08s;
+    user-select: none;
+  }
+
+  /* each finger group gets its own neon color via --kc */
+  .kb-key[data-finger="pinky"]  { --kc: var(--neon-pink);   }
+  .kb-key[data-finger="ring"]   { --kc: var(--neon-purple); }
+  .kb-key[data-finger="middle"] { --kc: var(--neon-cyan);   }
+  .kb-key[data-finger="index"]  { --kc: var(--neon-green);  }
+
+  .kb-key.lit {
+    border-color: var(--kc);
+    color: var(--kc);
+    box-shadow: 0 0 12px var(--kc);
+    transform: scale(1.12);
+    background: rgba(0,0,0,0.15);
+  }
+
+  /* Arabic keyboard font */
+  #keyboard-panel.arabic .kb-key {
+    font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif;
+    font-size: 13px;
+  }
 </style>
 </head>
 <body>
@@ -614,6 +681,9 @@
 
 <div id="tap-hint">⌨ Tap to type</div>
 
+<!-- On-screen keyboard: desktop only, visible during active gameplay -->
+<div id="keyboard-panel"></div>
+
 <script>
 // ═══════════════════════════════════════════════════
 //  WORD LISTS  (5 tiers by difficulty)
@@ -640,6 +710,34 @@ const WORDS_AR = {
   5: ['استراتيجية','إلكترونيات','بيروقراطية','إمبراطورية','ديموغرافية','استراتيجيات','تكنولوجيات','فيزيولوجيا','أنثروبولوجيا'],
 };
 const ALL_WORDS_AR_BY_TIER = [null, ...Object.values(WORDS_AR)];
+
+// ═══════════════════════════════════════════════════
+//  ON-SCREEN KEYBOARD LAYOUT  (Arabic 101 + QWERTY)
+// ═══════════════════════════════════════════════════
+// k = character stored in data-key (matched against next expected char)
+// f = finger: pinky | ring | middle | index
+const KB_LAYOUT = {
+  en: [
+    // row 0: numbers
+    [{k:'`',f:'pinky'},{k:'1',f:'pinky'},{k:'2',f:'ring'},{k:'3',f:'middle'},{k:'4',f:'index'},{k:'5',f:'index'},{k:'6',f:'index'},{k:'7',f:'index'},{k:'8',f:'middle'},{k:'9',f:'ring'},{k:'0',f:'pinky'},{k:'-',f:'pinky'},{k:'=',f:'pinky'}],
+    // row 1: QWERTY
+    [{k:'q',f:'pinky'},{k:'w',f:'ring'},{k:'e',f:'middle'},{k:'r',f:'index'},{k:'t',f:'index'},{k:'y',f:'index'},{k:'u',f:'index'},{k:'i',f:'middle'},{k:'o',f:'ring'},{k:'p',f:'pinky'}],
+    // row 2: ASDF
+    [{k:'a',f:'pinky'},{k:'s',f:'ring'},{k:'d',f:'middle'},{k:'f',f:'index'},{k:'g',f:'index'},{k:'h',f:'index'},{k:'j',f:'index'},{k:'k',f:'middle'},{k:'l',f:'ring'},{k:';',f:'pinky'},{k:"'",f:'pinky'}],
+    // row 3: ZXCV
+    [{k:'z',f:'pinky'},{k:'x',f:'ring'},{k:'c',f:'middle'},{k:'v',f:'index'},{k:'b',f:'index'},{k:'n',f:'index'},{k:'m',f:'index'},{k:',',f:'middle'},{k:'.',f:'ring'},{k:'/',f:'pinky'}],
+  ],
+  ar: [
+    // row 0: Arabic numbers row (ذ = backtick position)
+    [{k:'ذ',f:'pinky'},{k:'١',f:'pinky'},{k:'٢',f:'ring'},{k:'٣',f:'middle'},{k:'٤',f:'index'},{k:'٥',f:'index'},{k:'٦',f:'index'},{k:'٧',f:'index'},{k:'٨',f:'middle'},{k:'٩',f:'ring'},{k:'٠',f:'pinky'},{k:'-',f:'pinky'},{k:'=',f:'pinky'}],
+    // row 1: ض ص ث ق ف غ ع ه خ ح ج د  (maps to Q→P + [ ])
+    [{k:'ض',f:'pinky'},{k:'ص',f:'ring'},{k:'ث',f:'middle'},{k:'ق',f:'index'},{k:'ف',f:'index'},{k:'غ',f:'index'},{k:'ع',f:'index'},{k:'ه',f:'middle'},{k:'خ',f:'ring'},{k:'ح',f:'pinky'},{k:'ج',f:'pinky'},{k:'د',f:'pinky'}],
+    // row 2: ش س ي ب ل ا ت ن م ك ط  (maps to A→L + ;)
+    [{k:'ش',f:'pinky'},{k:'س',f:'ring'},{k:'ي',f:'middle'},{k:'ب',f:'index'},{k:'ل',f:'index'},{k:'ا',f:'index'},{k:'ت',f:'index'},{k:'ن',f:'middle'},{k:'م',f:'ring'},{k:'ك',f:'pinky'},{k:'ط',f:'pinky'}],
+    // row 3: ئ ء ؤ ر لا ى ة و ز ظ  (maps to Z→/)
+    [{k:'ئ',f:'pinky'},{k:'ء',f:'ring'},{k:'ؤ',f:'middle'},{k:'ر',f:'index'},{k:'لا',f:'index'},{k:'ى',f:'index'},{k:'ة',f:'index'},{k:'و',f:'middle'},{k:'ز',f:'ring'},{k:'ظ',f:'pinky'}],
+  ],
+};
 
 // ═══════════════════════════════════════════════════
 //  UI STRINGS  (English / Arabic)
@@ -858,6 +956,66 @@ function pickWord() {
 }
 
 // ═══════════════════════════════════════════════════
+//  ON-SCREEN KEYBOARD
+// ═══════════════════════════════════════════════════
+const KB_HEIGHT = 160;
+const kbPanel = document.getElementById('keyboard-panel');
+
+function getKbHeight() {
+  return (!isMobile && document.body.classList.contains('kbd-visible')) ? KB_HEIGHT : 0;
+}
+
+function buildKeyboard() {
+  kbPanel.innerHTML = '';
+  kbPanel.classList.toggle('arabic', state.language === 'ar');
+  const layout = KB_LAYOUT[state.language];
+  const isAr = state.language === 'ar';
+  layout.forEach(row => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'kb-row';
+    row.forEach(key => {
+      const keyEl = document.createElement('div');
+      keyEl.className = 'kb-key';
+      keyEl.dataset.key = key.k;
+      keyEl.dataset.finger = key.f;
+      keyEl.textContent = isAr ? key.k : key.k.toUpperCase();
+      rowEl.appendChild(keyEl);
+    });
+    kbPanel.appendChild(rowEl);
+  });
+}
+
+function showKeyboard() {
+  if (isMobile) return;
+  buildKeyboard();
+  document.body.classList.add('kbd-visible');
+  updateKeyboardHighlight();
+}
+
+function hideKeyboard() {
+  document.body.classList.remove('kbd-visible');
+}
+
+function updateKeyboardHighlight() {
+  kbPanel.querySelectorAll('.kb-key.lit').forEach(el => el.classList.remove('lit'));
+  const id = state.activeId;
+  if (id === null) return;
+  const t = state.tiles[id];
+  if (!t || t.typed >= t.word.length) return;
+  const nextChar = t.word[t.typed];
+  let searchKey;
+  if (state.language === 'en') {
+    // tier-5 English words are CamelCase; match the physical key (lowercase)
+    searchKey = nextChar.toLowerCase();
+  } else {
+    // Normalize alef variants (أ إ آ ٱ) to plain alef (ا) — same physical key
+    searchKey = nextChar.replace(/[أإآٱ]/g, 'ا');
+  }
+  const keyEl = kbPanel.querySelector(`.kb-key[data-key="${CSS.escape(searchKey)}"]`);
+  if (keyEl) keyEl.classList.add('lit');
+}
+
+// ═══════════════════════════════════════════════════
 //  TILE MANAGEMENT
 // ═══════════════════════════════════════════════════
 function spawnWord() {
@@ -869,7 +1027,7 @@ function spawnWord() {
   const id = state.nextId++;
   const hudH = document.getElementById('hud').offsetHeight;
   const vph = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-  const areaH = vph - hudH;
+  const areaH = vph - hudH - getKbHeight();
   const y = hudH + 20 + Math.random() * Math.max(areaH - 80, 40);
 
   const el = document.createElement('div');
@@ -910,6 +1068,7 @@ function selectTile(id) {
   if (id !== null && state.tiles[id]) {
     state.tiles[id].el.classList.add('active');
   }
+  updateKeyboardHighlight();
 }
 
 function destroyTile(id) {
@@ -1038,6 +1197,7 @@ function processChar(key) {
     playError();
   }
   updateHUD();
+  updateKeyboardHighlight();
 }
 
 // Desktop: keydown on document captures all keypresses regardless of focus
@@ -1232,6 +1392,7 @@ function startGame() {
   // spawn first word immediately, then on interval
   spawnWord();
   restartSpawnTimer();
+  showKeyboard();
   focusMobileInput();
 }
 
@@ -1247,6 +1408,7 @@ function gameOver() {
   const acc = state.totalKeys > 0
     ? Math.round(state.correctKeys / state.totalKeys * 100) : 0;
 
+  hideKeyboard();
   blurMobileInput();
 
   // save high score
@@ -1301,6 +1463,7 @@ function pauseGame() {
   cancelAnimationFrame(state.moveRaf);
   clearInterval(state.spawnTimer);
   pauseOverlay.classList.remove('hidden');
+  hideKeyboard();
   blurMobileInput();
   syncMenuButtons();
 }
@@ -1312,6 +1475,7 @@ function resumeGame() {
   lastMove = performance.now();
   state.moveRaf = requestAnimationFrame(moveLoop);
   restartSpawnTimer();
+  showKeyboard();
   focusMobileInput();
   syncMenuButtons();
 }
@@ -1327,6 +1491,7 @@ function resetGame() {
   state.activeId = null;
   state.particles = [];
 
+  hideKeyboard();
   blurMobileInput();
 
   // restore start screen
