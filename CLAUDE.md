@@ -107,6 +107,20 @@ The pause overlay (`#pause-overlay`) is semi-transparent so the player can see t
 - HUD is `position:fixed`, `z-index:10`; pause overlay is `z-index:15`; main overlay (start/game-over) is `z-index:20`; level-up splash is `z-index:25`; tap hint is `z-index:6`.
 - `@media (max-width: 520px)` — compact HUD (44px), icon-only buttons, hidden Acc/Combo stats, smaller tiles and hearts.
 
+### On-Screen Keyboard & SVG Hand Visualization (Desktop Only)
+
+A visual keyboard panel appears at the bottom of the screen during gameplay (desktop only, hidden on mobile ≤520px):
+- **Keyboard panel** (`#keyboard-panel`, 160px tall) displays QWERTY (English) or Arabic 101 layouts with neon-colored keys organized by finger (pinky/ring/middle/index).
+- **SVG hand skeleton** (`#hand-svg`) overlays the keyboard, showing both hands (10 fingers total) as wireframe paths. Each finger is color-coded to match its corresponding keyboard keys.
+- **Finger highlighting**: When a key is needed, both the key and its corresponding finger light up with glow and semi-transparent fill via the `.active` class.
+- **Implementation**:
+  - SVG paths are rebuilt each time `buildKeyboard()` runs (to avoid being wiped by `innerHTML = ''`)
+  - Each keyboard key has `data-finger` (thumb/index/middle/ring/pinky) and `data-hand` (left/right) attributes, set via `getHandForKey()` lookup map
+  - `updateKeyboardHighlight()` queries the SVG for the matching finger group and adds the `.active` class
+  - CSS handles glow and fill via `--kc` custom property (the finger's neon color)
+
+**Visibility**: The keyboard and hands are shown/hidden via `showKeyboard()` / `hideKeyboard()`, called by lifecycle functions (`startGame()`, `pauseGame()`, `resumeGame()`, `resetGame()`, `gameOver()`). Ensure `syncMenuButtons()` is called after every state transition to keep HUD button states in sync.
+
 ### Mobile support
 The game is fully playable on smartphones. Key implementation details:
 
