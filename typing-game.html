@@ -1568,10 +1568,12 @@ function startGame() {
   lastMove = performance.now();
   state.moveRaf = requestAnimationFrame(moveLoop);
 
+  // show keyboard before spawning first word so getKbHeight() returns correct value
+  showKeyboard();
+
   // spawn first word immediately, then on interval
   spawnWord();
   restartSpawnTimer();
-  showKeyboard();
   focusMobileInput();
 }
 
