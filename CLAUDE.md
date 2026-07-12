@@ -111,13 +111,14 @@ The pause overlay (`#pause-overlay`) is semi-transparent so the player can see t
 
 A visual keyboard panel appears at the bottom of the screen during gameplay (desktop only, hidden on mobile ≤520px):
 - **Keyboard panel** (`#keyboard-panel`, 160px tall) displays QWERTY (English) or Arabic 101 layouts with neon-colored keys organized by finger (pinky/ring/middle/index).
-- **SVG hand skeleton** (`#hand-svg`) overlays the keyboard, showing both hands (10 fingers total) as wireframe paths. Each finger is color-coded to match its corresponding keyboard keys.
+- **SVG hand overlay** (`#hand-svg`) overlays the keyboard, showing both hands (10 fingers total). Each finger is a single tapered `<path>` (rounded fingertip, wider base) rather than a wireframe skeleton, and each hand has a rounded `<rect>` palm connecting the fingers at their base. Each finger is color-coded to match its corresponding keyboard keys.
+- **Finger order/orientation**: per hand, pinky is the outermost digit and thumb is the innermost, angled inward toward the spacebar (real hand anatomy) — left hand goes pinky→ring→middle→index→thumb left-to-right; right hand mirrors it, index→middle→ring→pinky left-to-right, with thumb innermost on the right side too.
 - **Finger highlighting**: When a key is needed, both the key and its corresponding finger light up with glow and semi-transparent fill via the `.active` class.
 - **Implementation**:
-  - SVG paths are rebuilt each time `buildKeyboard()` runs (to avoid being wiped by `innerHTML = ''`)
+  - SVG markup (both hands, all finger `<path>`s and palm `<rect>`s) is rebuilt as a template literal each time `buildKeyboard()` runs (to avoid being wiped by `innerHTML = ''`)
   - Each keyboard key has `data-finger` (thumb/index/middle/ring/pinky) and `data-hand` (left/right) attributes, set via `getHandForKey()` lookup map
   - `updateKeyboardHighlight()` queries the SVG for the matching finger group and adds the `.active` class
-  - CSS handles glow and fill via `--kc` custom property (the finger's neon color)
+  - CSS handles glow and fill via `--kc` custom property (the finger's neon color); the palm has its own static `.palm-outline` style and never lights up
 
 **Visibility**: The keyboard and hands are shown/hidden via `showKeyboard()` / `hideKeyboard()`, called by lifecycle functions (`startGame()`, `pauseGame()`, `resumeGame()`, `resetGame()`, `gameOver()`). Ensure `syncMenuButtons()` is called after every state transition to keep HUD button states in sync.
 
