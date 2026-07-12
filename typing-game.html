@@ -587,6 +587,48 @@
     font-family: system-ui, -apple-system, 'Segoe UI', Tahoma, Arial, sans-serif;
     font-size: 13px;
   }
+
+  /* ── SVG HAND VISUALIZATION ── */
+  #hand-svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 7;
+  }
+
+  @media (max-width: 520px) {
+    #hand-svg { display: none; }
+  }
+
+  .hand { }
+  .finger { }
+
+  .finger-outline {
+    stroke: var(--dim);
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+    opacity: 0.2;
+    transition: stroke 0.08s, fill 0.08s, opacity 0.08s, filter 0.08s;
+  }
+
+  /* Color mapping by finger */
+  .finger[data-finger="pinky"] { --kc: var(--neon-pink); }
+  .finger[data-finger="ring"] { --kc: var(--neon-purple); }
+  .finger[data-finger="middle"] { --kc: var(--neon-cyan); }
+  .finger[data-finger="index"] { --kc: var(--neon-green); }
+  .finger[data-finger="thumb"] { --kc: var(--neon-cyan); }
+
+  .finger.active .finger-outline {
+    stroke: var(--kc);
+    stroke-width: 2;
+    fill: var(--kc);
+    opacity: 0.3;
+    filter: drop-shadow(0 0 8px var(--kc));
+  }
 </style>
 </head>
 <body>
@@ -682,7 +724,67 @@
 <div id="tap-hint">⌨ Tap to type</div>
 
 <!-- On-screen keyboard: desktop only, visible during active gameplay -->
-<div id="keyboard-panel"></div>
+<div id="keyboard-panel">
+  <svg id="hand-svg" viewBox="0 0 280 140" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="finger-glow">
+        <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+        <feMerge>
+          <feMergeNode in="coloredBlur"/>
+          <feMergeNode in="SourceGraphic"/>
+        </feMerge>
+      </filter>
+    </defs>
+
+    <!-- Left hand -->
+    <g class="hand" data-hand="left">
+      <!-- Left Thumb (bottom center-left, pointing down) -->
+      <g class="finger" data-finger="thumb">
+        <path class="finger-outline" d="M 40 80 L 45 100 L 50 115"/>
+      </g>
+      <!-- Left Index (tall, pointing up) -->
+      <g class="finger" data-finger="index">
+        <path class="finger-outline" d="M 55 60 L 55 35 L 55 20"/>
+      </g>
+      <!-- Left Middle (tallest, center-left) -->
+      <g class="finger" data-finger="middle">
+        <path class="finger-outline" d="M 70 50 L 70 25 L 70 10"/>
+      </g>
+      <!-- Left Ring -->
+      <g class="finger" data-finger="ring">
+        <path class="finger-outline" d="M 85 55 L 85 32 L 85 15"/>
+      </g>
+      <!-- Left Pinky (shortest) -->
+      <g class="finger" data-finger="pinky">
+        <path class="finger-outline" d="M 100 70 L 100 48 L 100 32"/>
+      </g>
+    </g>
+
+    <!-- Right hand (mirrored) -->
+    <g class="hand" data-hand="right">
+      <!-- Right Index -->
+      <g class="finger" data-finger="index">
+        <path class="finger-outline" d="M 225 60 L 225 35 L 225 20"/>
+      </g>
+      <!-- Right Middle (tallest, center-right) -->
+      <g class="finger" data-finger="middle">
+        <path class="finger-outline" d="M 210 50 L 210 25 L 210 10"/>
+      </g>
+      <!-- Right Ring -->
+      <g class="finger" data-finger="ring">
+        <path class="finger-outline" d="M 195 55 L 195 32 L 195 15"/>
+      </g>
+      <!-- Right Pinky (shortest) -->
+      <g class="finger" data-finger="pinky">
+        <path class="finger-outline" d="M 180 70 L 180 48 L 180 32"/>
+      </g>
+      <!-- Right Thumb (bottom center-right, pointing down) -->
+      <g class="finger" data-finger="thumb">
+        <path class="finger-outline" d="M 240 80 L 235 100 L 230 115"/>
+      </g>
+    </g>
+  </svg>
+</div>
 
 <script>
 // ═══════════════════════════════════════════════════
