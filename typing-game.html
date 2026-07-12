@@ -629,6 +629,12 @@
     opacity: 0.3;
     filter: drop-shadow(0 0 8px var(--kc));
   }
+
+  .palm-outline {
+    stroke: rgba(0,245,255,0.35);
+    stroke-width: 1.5;
+    fill: rgba(0,245,255,0.04);
+  }
 </style>
 </head>
 <body>
@@ -736,66 +742,56 @@
       </filter>
     </defs>
 
-    <!-- Left hand -->
+    <!-- Left hand: pinky (outside) → ring → middle → index (inside), thumb tucked inward near center -->
     <g class="hand" data-hand="left">
+      <!-- Palm -->
+      <rect x="95" y="138" width="310" height="55" rx="28" class="palm-outline"/>
       <!-- Left Pinky -->
       <g class="finger" data-finger="pinky">
-        <ellipse cx="120" cy="80" rx="18" ry="28" class="finger-outline"/>
-        <circle cx="120" cy="50" r="12" class="finger-outline"/>
+        <path class="finger-outline" d="M116 145 L120 105 A10 10 0 0 1 140 105 L144 145 Z"/>
       </g>
       <!-- Left Ring -->
       <g class="finger" data-finger="ring">
-        <ellipse cx="180" cy="75" rx="20" ry="32" class="finger-outline"/>
-        <circle cx="180" cy="40" r="14" class="finger-outline"/>
+        <path class="finger-outline" d="M175 145 L179 76 A11 11 0 0 1 201 76 L205 145 Z"/>
       </g>
       <!-- Left Middle -->
       <g class="finger" data-finger="middle">
-        <ellipse cx="240" cy="70" rx="20" ry="35" class="finger-outline"/>
-        <circle cx="240" cy="32" r="14" class="finger-outline"/>
+        <path class="finger-outline" d="M234 145 L238 62 A12 12 0 0 1 262 62 L266 145 Z"/>
       </g>
       <!-- Left Index -->
       <g class="finger" data-finger="index">
-        <ellipse cx="300" cy="75" rx="20" ry="32" class="finger-outline"/>
-        <circle cx="300" cy="40" r="14" class="finger-outline"/>
+        <path class="finger-outline" d="M295 145 L299 79 A11 11 0 0 1 321 79 L325 145 Z"/>
       </g>
-      <!-- Left Thumb -->
+      <!-- Left Thumb (innermost, angled toward spacebar) -->
       <g class="finger" data-finger="thumb">
-        <ellipse cx="80" cy="110" rx="16" ry="24" class="finger-outline" transform="rotate(-30 80 110)"/>
-        <circle cx="70" cy="75" r="12" class="finger-outline"/>
+        <path class="finger-outline" d="M364 185 L368 152 A12 12 0 0 1 392 152 L396 185 Z" transform="rotate(-25 380 185)"/>
       </g>
-      <!-- Palm -->
-      <ellipse cx="200" cy="120" rx="90" ry="50" style="stroke: rgba(0,245,255,0.4); stroke-width: 1.5; fill: none; opacity: 0.3;"/>
     </g>
 
-    <!-- Right hand (mirrored) -->
+    <!-- Right hand (mirrored): index (inside) → middle → ring → pinky (outside), thumb tucked inward near center -->
     <g class="hand" data-hand="right">
+      <!-- Palm -->
+      <rect x="795" y="138" width="310" height="55" rx="28" class="palm-outline"/>
       <!-- Right Index -->
       <g class="finger" data-finger="index">
-        <ellipse cx="900" cy="75" rx="20" ry="32" class="finger-outline"/>
-        <circle cx="900" cy="40" r="14" class="finger-outline"/>
+        <path class="finger-outline" d="M875 145 L879 79 A11 11 0 0 1 901 79 L905 145 Z"/>
       </g>
       <!-- Right Middle -->
       <g class="finger" data-finger="middle">
-        <ellipse cx="960" cy="70" rx="20" ry="35" class="finger-outline"/>
-        <circle cx="960" cy="32" r="14" class="finger-outline"/>
+        <path class="finger-outline" d="M934 145 L938 62 A12 12 0 0 1 962 62 L966 145 Z"/>
       </g>
       <!-- Right Ring -->
       <g class="finger" data-finger="ring">
-        <ellipse cx="1020" cy="75" rx="20" ry="32" class="finger-outline"/>
-        <circle cx="1020" cy="40" r="14" class="finger-outline"/>
+        <path class="finger-outline" d="M995 145 L999 76 A11 11 0 0 1 1021 76 L1025 145 Z"/>
       </g>
       <!-- Right Pinky -->
       <g class="finger" data-finger="pinky">
-        <ellipse cx="1080" cy="80" rx="18" ry="28" class="finger-outline"/>
-        <circle cx="1080" cy="50" r="12" class="finger-outline"/>
+        <path class="finger-outline" d="M1056 145 L1060 105 A10 10 0 0 1 1080 105 L1084 145 Z"/>
       </g>
-      <!-- Right Thumb -->
+      <!-- Right Thumb (innermost, angled toward spacebar) -->
       <g class="finger" data-finger="thumb">
-        <ellipse cx="1120" cy="110" rx="16" ry="24" class="finger-outline" transform="rotate(30 1120 110)"/>
-        <circle cx="1130" cy="75" r="12" class="finger-outline"/>
+        <path class="finger-outline" d="M804 185 L808 152 A12 12 0 0 1 832 152 L836 185 Z" transform="rotate(25 820 185)"/>
       </g>
-      <!-- Palm -->
-      <ellipse cx="1000" cy="120" rx="90" ry="50" style="stroke: rgba(0,245,255,0.4); stroke-width: 1.5; fill: none; opacity: 0.3;"/>
     </g>
   </svg>
 </div>
@@ -1123,50 +1119,40 @@ function buildKeyboard() {
       </filter>
     </defs>
     <g class="hand" data-hand="left">
+      <rect x="95" y="138" width="310" height="55" rx="28" class="palm-outline"/>
       <g class="finger" data-finger="pinky">
-        <ellipse cx="120" cy="80" rx="18" ry="28" class="finger-outline"/>
-        <circle cx="120" cy="50" r="12" class="finger-outline"/>
+        <path class="finger-outline" d="M116 145 L120 105 A10 10 0 0 1 140 105 L144 145 Z"/>
       </g>
       <g class="finger" data-finger="ring">
-        <ellipse cx="180" cy="75" rx="20" ry="32" class="finger-outline"/>
-        <circle cx="180" cy="40" r="14" class="finger-outline"/>
+        <path class="finger-outline" d="M175 145 L179 76 A11 11 0 0 1 201 76 L205 145 Z"/>
       </g>
       <g class="finger" data-finger="middle">
-        <ellipse cx="240" cy="70" rx="20" ry="35" class="finger-outline"/>
-        <circle cx="240" cy="32" r="14" class="finger-outline"/>
+        <path class="finger-outline" d="M234 145 L238 62 A12 12 0 0 1 262 62 L266 145 Z"/>
       </g>
       <g class="finger" data-finger="index">
-        <ellipse cx="300" cy="75" rx="20" ry="32" class="finger-outline"/>
-        <circle cx="300" cy="40" r="14" class="finger-outline"/>
+        <path class="finger-outline" d="M295 145 L299 79 A11 11 0 0 1 321 79 L325 145 Z"/>
       </g>
       <g class="finger" data-finger="thumb">
-        <ellipse cx="80" cy="110" rx="16" ry="24" class="finger-outline" transform="rotate(-30 80 110)"/>
-        <circle cx="70" cy="75" r="12" class="finger-outline"/>
+        <path class="finger-outline" d="M364 185 L368 152 A12 12 0 0 1 392 152 L396 185 Z" transform="rotate(-25 380 185)"/>
       </g>
-      <ellipse cx="200" cy="120" rx="90" ry="50" style="stroke: rgba(0,245,255,0.4); stroke-width: 1.5; fill: none; opacity: 0.3;"/>
     </g>
     <g class="hand" data-hand="right">
+      <rect x="795" y="138" width="310" height="55" rx="28" class="palm-outline"/>
       <g class="finger" data-finger="index">
-        <ellipse cx="900" cy="75" rx="20" ry="32" class="finger-outline"/>
-        <circle cx="900" cy="40" r="14" class="finger-outline"/>
+        <path class="finger-outline" d="M875 145 L879 79 A11 11 0 0 1 901 79 L905 145 Z"/>
       </g>
       <g class="finger" data-finger="middle">
-        <ellipse cx="960" cy="70" rx="20" ry="35" class="finger-outline"/>
-        <circle cx="960" cy="32" r="14" class="finger-outline"/>
+        <path class="finger-outline" d="M934 145 L938 62 A12 12 0 0 1 962 62 L966 145 Z"/>
       </g>
       <g class="finger" data-finger="ring">
-        <ellipse cx="1020" cy="75" rx="20" ry="32" class="finger-outline"/>
-        <circle cx="1020" cy="40" r="14" class="finger-outline"/>
+        <path class="finger-outline" d="M995 145 L999 76 A11 11 0 0 1 1021 76 L1025 145 Z"/>
       </g>
       <g class="finger" data-finger="pinky">
-        <ellipse cx="1080" cy="80" rx="18" ry="28" class="finger-outline"/>
-        <circle cx="1080" cy="50" r="12" class="finger-outline"/>
+        <path class="finger-outline" d="M1056 145 L1060 105 A10 10 0 0 1 1080 105 L1084 145 Z"/>
       </g>
       <g class="finger" data-finger="thumb">
-        <ellipse cx="1120" cy="110" rx="16" ry="24" class="finger-outline" transform="rotate(30 1120 110)"/>
-        <circle cx="1130" cy="75" r="12" class="finger-outline"/>
+        <path class="finger-outline" d="M804 185 L808 152 A12 12 0 0 1 832 152 L836 185 Z" transform="rotate(25 820 185)"/>
       </g>
-      <ellipse cx="1000" cy="120" rx="90" ry="50" style="stroke: rgba(0,245,255,0.4); stroke-width: 1.5; fill: none; opacity: 0.3;"/>
     </g>
   </svg>`;
 
